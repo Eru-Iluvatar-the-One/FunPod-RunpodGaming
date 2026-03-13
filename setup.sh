@@ -1,31 +1,28 @@
 #!/usr/bin/env bash
-# RunPod Gaming Rig v5
-# NVIDIA L4 | Ubuntu 22.04 | Sunshine -> Moonlight | 4K@144Hz
+###############################################################################
+#  RunPod Gaming Rig v12
+#  NVIDIA L4 | Ubuntu 22.04 | Sunshine → Moonlight | 4K@144Hz
+#
+#  v12:
+#    - Generate /workspace/connect.bat (one-click tunnel + Moonlight launch)
+#    - Dynamic public IP + SSH port detection
+#    - Clean footer: just download connect.bat
+###############################################################################
 
-set -e
+mkdir -p /workspace/gaming-logs
+exec > >(tee /workspace/gaming-logs/setup.log) 2>&1
+set -uo pipefail
 
+SECONDS=0
 LOG_DIR="/workspace/gaming-logs"
-PKG_CACHE="/tmp/rp_pkgs"
-mkdir -p "$LOG_DIR" "$PKG_CACHE"
-LOG="$LOG_DIR/setup.log"
 
-step() { echo "=== $* ==="; echo "=== $* ===" >> "$LOG"; }
-log()  { echo "[OK] $*";    echo "[OK] $*"    >> "$LOG"; }
-warn() { echo "[WARN] $*";  echo "[WARN] $*"  >> "$LOG"; }
-die()  { echo "[FATAL] $*"; echo "[FATAL] $*" >> "$LOG"; exit 1; }
-
-echo "============================================"
-echo " RunPod Gaming Rig v5 -- $(date)"
-echo " Log: $LOG"
-echo "============================================"
-
-# CONFIG
+# ── tunables ──────────────────────────────────────────────────
+DISPLAY_NUM=99
+export DISPLAY=":${DISPLAY_NUM}"
+RES_W=3840; RES_H=2160; RES_HZ=144
 ROOT_PASS="gondolin123"
-DISP=":99"
-SUNSHINE_VER="v0.23.1"
-SUNSHINE_URL="https://github.com/LizardByte/Sunshine/releases/download/${SUNSHINE_VER}/sunshine-ubuntu-22.04-amd64.deb"
-RUNPOD_HOST="66.92.198.162"
-RUNPOD_SSH_PORT="11193"
+SUNSHINE_USER="admin"
+SUNSHINE_PASS="gondolin123"
 B2_BUCKET="Funfun"
 B2_ENDPOINT="${B2_ENDPOINT:-s3.us-east-005.backblazeb2.com}"
 B2_KEY_ID="${B2_KEY_ID:-}"
@@ -34,177 +31,237 @@ FERAL_SAVES="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User 
 FERAL_PACKS="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User Data/packs"
 PROTON_BASE="/root/.steam/steam/steamapps/compatdata/779340/pfx/drive_c/users/steamuser/Documents/My Games/Total War THREE KINGDOMS"
 
-# 1. SSH
-step "1. SSH"
-echo "root:${ROOT_PASS}" | chpasswd >> "$LOG" 2>&1
-CFG=/etc/ssh/sshd_config
-sed -i 's/^#*\s*PasswordAuthentication\s.*/PasswordAuthentication yes/' "$CFG"
-sed -i 's/^#*\s*PermitRootLogin\s.*/PermitRootLogin yes/' "$CFG"
-grep -q "^PasswordAuthentication yes" "$CFG" || echo "PasswordAuthentication yes" >> "$CFG"
-grep -q "^PermitRootLogin yes"        "$CFG" || echo "PermitRootLogin yes"        >> "$CFG"
-service ssh restart >> "$LOG" 2>&1 \
-  || systemctl restart ssh >> "$LOG" 2>&1 \
-  || /etc/init.d/ssh restart >> "$LOG" 2>&1 \
-  || warn "SSH restart failed"
-log "SSH OK (root:${ROOT_PASS})"
+# ── helpers ───────────────────────────────────────────────────
+G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; B='\033[1;34m'; N='\033[0m'
+log()  { printf "${G}[OK %s]${N} %s\n" "$(date +%H:%M:%S)" "$*"; }
+warn() { printf "${Y}[WW %s]${N} %s\n" "$(date +%H:%M:%S)" "$*"; }
+err()  { printf "${R}[EE %s]${N} %s\n" "$(date +%H:%M:%S)" "$*"; }
+hdr()  { printf "\n${B}=== %s ===${N}\n" "$*"; }
 
-# 2. GPU
-step "2. GPU DETECTION"
+###############################################################################
+hdr "0 — BOOTSTRAP + CLEANUP"
+###############################################################################
+pkill -x supervisord 2>/dev/null || true
+pkill -f Xvfb        2>/dev/null || true
+pkill -f Xorg        2>/dev/null || true
+pkill -f sunshine    2>/dev/null || true
+pkill -f openbox     2>/dev/null || true
+sleep 2
+
+rm -f /tmp/.X${DISPLAY_NUM}-lock 2>/dev/null || true
+rm -f /tmp/.X11-unix/X${DISPLAY_NUM} 2>/dev/null || true
+
+apt-get install -y curl wget 2>/dev/null || true
+log "bootstrap done"
+
+###############################################################################
+hdr "1 — SSH"
+###############################################################################
+echo "root:${ROOT_PASS}" | chpasswd
+CFG=/etc/ssh/sshd_config
+grep -q '^PasswordAuthentication' "$CFG" \
+    && sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' "$CFG" \
+    || echo 'PasswordAuthentication yes' >> "$CFG"
+grep -q '^PermitRootLogin' "$CFG" \
+    && sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' "$CFG" \
+    || echo 'PermitRootLogin yes' >> "$CFG"
+grep -q '^#PasswordAuthentication' "$CFG" && sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' "$CFG" || true
+grep -q '^#PermitRootLogin' "$CFG"        && sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' "$CFG"              || true
+service ssh restart 2>/dev/null || systemctl restart ssh 2>/dev/null || /usr/sbin/sshd 2>/dev/null || true
+log "SSH ready"
+
+###############################################################################
+hdr "2 — PURGE BROKEN DPKG STATE"
+###############################################################################
+dpkg --remove --force-remove-reinstreq sunshine 2>/dev/null || true
+dpkg --purge  --force-remove-reinstreq sunshine 2>/dev/null || true
+dpkg --configure -a 2>/dev/null || true
+apt-get -f install -y 2>/dev/null || true
+log "dpkg state clean"
+
+###############################################################################
+hdr "3 — PACKAGES"
+###############################################################################
+export DEBIAN_FRONTEND=noninteractive
+add-apt-repository -y universe 2>/dev/null || true
+apt-get update -qq || warn "apt update had errors"
+
+apt-get install -y --no-install-recommends \
+    xvfb x11-xserver-utils x11-utils xterm openbox dbus-x11 \
+    xdotool xauth xkb-data 2>/dev/null || warn "some X pkgs failed"
+
+apt-get install -y --no-install-recommends \
+    pulseaudio pulseaudio-utils alsa-utils 2>/dev/null || warn "pulse pkgs failed"
+
+apt-get install -y --no-install-recommends \
+    rsync jq mesa-utils 2>/dev/null || warn "util pkgs failed"
+
+# CRITICAL sunshine deps
+CRITICAL_DEPS=(
+    libayatana-appindicator3-1
+    libva2
+    libva-drm2
+)
+for pkg in "${CRITICAL_DEPS[@]}"; do
+    log "Installing CRITICAL dep: $pkg"
+    if ! apt-get install -y --no-install-recommends "$pkg"; then
+        err "CRITICAL dep $pkg FAILED — sunshine will not start without this"
+    fi
+done
+
+for pkg in \
+    libnotify4 \
+    libminiupnpc17 \
+    libevdev2 \
+    libnuma1 \
+    libvdpau1 \
+    libboost-locale1.74.0 \
+    libboost-thread1.74.0 \
+    libboost-filesystem1.74.0 \
+    libboost-log1.74.0 \
+    libboost-program-options1.74.0; do
+    apt-get install -y --no-install-recommends "$pkg" 2>/dev/null \
+        || warn "optional dep $pkg not available — skipping"
+done
+ldconfig 2>/dev/null || true
+
+CRITICAL_SO_OK=true
+for soname in libayatana-appindicator3.so.1 libva.so.2; do
+    SO_PATH=$(find /usr/lib /usr/lib64 /usr/local/lib -name "$soname" 2>/dev/null | head -1 || true)
+    if [ -n "$SO_PATH" ]; then
+        log "FOUND: $soname → $SO_PATH"
+    else
+        err "MISSING: $soname"
+        CRITICAL_SO_OK=false
+    fi
+done
+[ "$CRITICAL_SO_OK" = false ] && err "Critical .so missing — sunshine WILL crash"
+
+log "packages done"
+
+pip3 install --quiet supervisor 2>/dev/null || true
+SUPD=$(command -v supervisord 2>/dev/null \
+    || find /usr/local/bin /root/.local/bin /usr/bin -name supervisord 2>/dev/null | head -1 || true)
+[ -z "$SUPD" ] && { apt-get install -y supervisor 2>/dev/null || true; SUPD=$(command -v supervisord 2>/dev/null || true); }
+[ -z "$SUPD" ] && { err "supervisord not found"; exit 1; }
+SUPC=$(command -v supervisorctl 2>/dev/null \
+    || find /usr/local/bin /root/.local/bin /usr/bin -name supervisorctl 2>/dev/null | head -1 || true)
+[ -n "$SUPC" ] && ln -sf "$SUPC" /usr/local/bin/supervisorctl 2>/dev/null || true
+log "supervisord: $SUPD"
+
+###############################################################################
+hdr "4 — GPU / NVENC"
+###############################################################################
+DRI_RENDER=$(ls /dev/dri/renderD* 2>/dev/null | sort -V | tail -1 || true)
+[ -z "$DRI_RENDER" ] && { warn "No renderD* found"; DRI_RENDER="/dev/dri/renderD128"; } \
+                     || log "DRI render: $DRI_RENDER"
+
 GPU_NAME=$(nvidia-smi --query-gpu=name           --format=csv,noheader 2>/dev/null | head -1 || echo "UNKNOWN")
 DRV_FULL=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 || echo "570.0")
-DRV_MAJ=$(echo "$DRV_FULL" | cut -d. -f1)
-PCI_RAW=$(nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader 2>/dev/null | head -1 \
-          || echo "0000:00:1e.0")
-BUS=$(echo "$PCI_RAW" | awk -F: '{if(NF==4)print $2; else print $1}' | tr -d ' ')
-DEV=$(echo "$PCI_RAW" | awk -F: '{if(NF==4)print $3; else print $2}' | cut -d. -f1 | tr -d ' ')
-FUN=$(echo "$PCI_RAW" | awk -F. '{print $NF}' | tr -d ' ')
-XORG_BUSID="PCI:$((16#$BUS)):$((16#$DEV)):$((16#$FUN))"
-log "GPU=$GPU_NAME  DRV=$DRV_MAJ  BusID=$XORG_BUSID"
+log "GPU=$GPU_NAME drv=$DRV_FULL"
 
-# 3. PACKAGES
-step "3. PACKAGES"
-# Enable universe for openbox/pulseaudio
-add-apt-repository -y universe >> "$LOG" 2>&1 || true
-DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1 || warn "apt-get update failed"
-
-apt_install() {
-  local pkg="$1" chk="${2:-}"
-  [ -n "$chk" ] && command -v "$chk" >/dev/null 2>&1 && { log "  skip $pkg"; return 0; }
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$pkg" >> "$LOG" 2>&1 \
-    && log "  installed $pkg" \
-    || warn "  failed $pkg"
-}
-
-apt_install "xserver-xorg-core"    "Xorg"
-apt_install "x11-xserver-utils"    "xrandr"
-apt_install "openbox"              "openbox"
-apt_install "pulseaudio"           "pulseaudio"
-apt_install "xkb-data"             ""
-apt_install "xauth"                ""
-# nvidia DDX — version-matched; warn-only if missing (host driver handles rendering)
-DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  "xserver-xorg-video-nvidia-${DRV_MAJ}" >> "$LOG" 2>&1 \
-  || warn "xserver-xorg-video-nvidia-${DRV_MAJ} not in apt — Xorg will use modesetting driver"
-
-# Sunshine — curl, not wget
-if ! command -v sunshine >/dev/null 2>&1; then
-  log "Downloading Sunshine ${SUNSHINE_VER}..."
-  curl -fsSL -o "$PKG_CACHE/sunshine.deb" "$SUNSHINE_URL" \
-    || die "Sunshine download failed"
-  # dpkg install tries hardlinks across filesystems if /tmp != / — use -x to extract directly
-  dpkg-deb -x "$PKG_CACHE/sunshine.deb" / >> "$LOG" 2>&1
-  chmod +x /usr/bin/sunshine 2>/dev/null || true
-fi
-SUNSHINE_BIN=$(command -v sunshine 2>/dev/null \
-  || find /usr/bin /usr/local/bin -name sunshine 2>/dev/null | head -1 || true)
-[ -z "$SUNSHINE_BIN" ] && die "sunshine binary not found"
-ldconfig >> "$LOG" 2>&1
-log "Sunshine at $SUNSHINE_BIN"
-
-# 4. HARDWARE ENCODER
-step "4. HARDWARE ENCODER"
-mkdir -p /dev/dri
-[ -e /dev/dri/card0 ]      || mknod -m 660 /dev/dri/card0      c 226 0
-[ -e /dev/dri/renderD128 ] || mknod -m 660 /dev/dri/renderD128 c 226 128
-chown root:video /dev/dri/* 2>/dev/null || true
-log "/dev/dri nodes OK"
-
-NVENC=$(find /usr/lib /usr/local/lib /usr/local/nvidia/lib64 \
-  -name "libnvidia-encode.so.*" 2>/dev/null | grep -v 'so\.1$' | sort -V | tail -1 || true)
-if [ -n "$NVENC" ]; then
-  mkdir -p /usr/lib/x86_64-linux-gnu
-  ln -sf "$NVENC" /usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1
-  ln -sf "$NVENC" /usr/lib/x86_64-linux-gnu/libnvidia-encode.so
-  ldconfig >> "$LOG" 2>&1
-  log "libnvidia-encode -> $NVENC"
+LINK_DIR="/usr/lib/x86_64-linux-gnu"
+NVENC_REAL=""
+for sd in "$LINK_DIR" /usr/local/nvidia/lib64 /usr/lib64 /usr/local/lib; do
+    c=$(find "$sd" -maxdepth 1 -name "libnvidia-encode.so.*" \
+        ! -name "libnvidia-encode.so.1" 2>/dev/null | sort -V | tail -1 || true)
+    [ -n "$c" ] && { NVENC_REAL="$c"; break; }
+done
+if [ -n "$NVENC_REAL" ]; then
+    ln -sf "$NVENC_REAL"                       "${LINK_DIR}/libnvidia-encode.so.1" 2>/dev/null \
+        || cp -f "$NVENC_REAL"                 "${LINK_DIR}/libnvidia-encode.so.1"
+    ln -sf "${LINK_DIR}/libnvidia-encode.so.1" "${LINK_DIR}/libnvidia-encode.so"
+    printf '%s\n' "$LINK_DIR" "$(dirname "$NVENC_REAL")" > /etc/ld.so.conf.d/nvenc.conf
+    ldconfig
+    log "NVENC → $NVENC_REAL"
 else
-  warn "libnvidia-encode not found — NVENC may fail"
+    err "libnvidia-encode.so not found — NVENC will fail"
+fi
+CUDA_REAL=$(find "$LINK_DIR" /usr/local/nvidia/lib64 /usr/lib64 \
+    -maxdepth 1 -name "libcuda.so.*" ! -name "libcuda.so.1" 2>/dev/null | head -1 || true)
+[ -n "$CUDA_REAL" ] && { ln -sf "$CUDA_REAL" "${LINK_DIR}/libcuda.so.1" 2>/dev/null || true; ldconfig; log "libcuda.so.1 linked"; }
+
+###############################################################################
+hdr "5 — SUNSHINE"
+###############################################################################
+SUN_BIN=$(command -v sunshine 2>/dev/null \
+    || find /usr/bin /usr/local/bin -name sunshine -type f 2>/dev/null | head -1 || true)
+
+if [ -z "$SUN_BIN" ]; then
+    log "Downloading Sunshine deb..."
+    SUN_URL="https://github.com/LizardByte/Sunshine/releases/download/v0.23.1/sunshine-ubuntu-22.04-amd64.deb"
+    curl -fsSL "$SUN_URL" -o /tmp/sunshine.deb || { err "Sunshine download failed"; exit 1; }
+    SUN_STAGE=$(mktemp -d /tmp/sun-stage-XXXXXX)
+    dpkg-deb -x /tmp/sunshine.deb "$SUN_STAGE"
+    [ -f "${SUN_STAGE}/usr/bin/sunshine" ]   && cp -f "${SUN_STAGE}/usr/bin/sunshine"   /usr/bin/sunshine
+    [ -d "${SUN_STAGE}/usr/lib/sunshine" ]   && { mkdir -p /usr/lib/sunshine; cp -a "${SUN_STAGE}/usr/lib/sunshine/." /usr/lib/sunshine/; }
+    [ -d "${SUN_STAGE}/usr/share/sunshine" ] && { mkdir -p /usr/share/sunshine; cp -a "${SUN_STAGE}/usr/share/sunshine/." /usr/share/sunshine/; }
+    [ -d "${SUN_STAGE}/etc/sunshine" ]       && { mkdir -p /etc/sunshine; cp -a "${SUN_STAGE}/etc/sunshine/." /etc/sunshine/; }
+    rm -rf "$SUN_STAGE" /tmp/sunshine.deb
+    ldconfig 2>/dev/null || true
+    log "Sunshine extracted"
+else
+    log "Sunshine already present: $SUN_BIN"
 fi
 
-# 5. XORG CONFIG
-step "5. XORG CONFIG"
-mkdir -p /etc/X11
-cat > /etc/X11/xorg.conf << XORGEOF
-Section "ServerLayout"
-    Identifier "Sunshine"
-    Screen 0 "Screen0"
-    Option "BlankTime" "0"
-    Option "StandbyTime" "0"
-    Option "SuspendTime" "0"
-    Option "OffTime" "0"
-EndSection
+SUN_BIN=$(command -v sunshine 2>/dev/null \
+    || find /usr/bin /usr/local/bin -name sunshine -type f 2>/dev/null | head -1 || true)
+[ -z "$SUN_BIN" ] && { err "sunshine binary not found"; exit 1; }
+chmod +x "$SUN_BIN"
 
-Section "Device"
-    Identifier "GPU0"
-    Driver "nvidia"
-    BusID "${XORG_BUSID}"
-    Option "AllowEmptyInitialConfiguration" "true"
-    Option "ConnectedMonitor" "DFP"
-    Option "HardDPMS" "false"
-EndSection
+MISSING_LIBS=$(ldd "$SUN_BIN" 2>/dev/null | grep "not found" || true)
+if [ -n "$MISSING_LIBS" ]; then
+    err "Sunshine missing shared libs:"
+    echo "$MISSING_LIBS" | sed 's/^/  /'
+else
+    log "All sunshine shared libs satisfied"
+fi
 
-Section "Monitor"
-    Identifier "VirtualMonitor"
-    HorizSync  31.5-140.0
-    VertRefresh 120.0-144.0
-    Modeline "3840x2160_144" 1975.68 3840 4152 4576 5312 2160 2163 2168 2237 -hsync +vsync
-EndSection
-
-Section "Screen"
-    Identifier "Screen0"
-    Device "GPU0"
-    Monitor "VirtualMonitor"
-    DefaultDepth 24
-    Option "ModeValidation" "NoMaxPClkCheck,NoEdidMaxPClkCheck,NoEdidDFPMaxSizeCheck,NoHorizSyncCheck,NoVertRefreshCheck,AllowNon60hzDFPModes"
-    Option "MetaModes" "3840x2160_144"
-    SubSection "Display"
-        Depth 24
-        Modes "3840x2160_144"
-    EndSubSection
-EndSection
-XORGEOF
-log "xorg.conf written (BusID=$XORG_BUSID)"
-
-# 6. SUNSHINE CONFIG
-step "6. SUNSHINE CONFIG"
 mkdir -p /root/.config/sunshine
-cat > /root/.config/sunshine/sunshine.conf << SCONF
-capture       = x11
-encoder       = nvenc
-adapter_name  = /dev/dri/renderD128
-output_name   = 0
-resolutions   = [3840x2160, 2560x1440, 1920x1080]
-fps           = [144, 60, 30]
-address_family = ipv4
-upnp          = disabled
-port          = 47989
-min_log_level = info
-SCONF
-"$SUNSHINE_BIN" --creds admin "${ROOT_PASS}" >> "$LOG" 2>&1 || warn "sunshine --creds failed — set via web UI"
-log "Sunshine configured"
+echo '{}' > /root/.config/sunshine/sunshine_state.json
 
-# 7. GAME ASSETS
-step "7. GAME ASSETS"
+cat > /root/.config/sunshine/sunshine.conf << SUNEOF
+port                  = 47989
+upnp                  = off
+origin_web_ui_allowed = pc
+address_family        = ipv4
+capture               = x11
+encoder               = nvenc
+adapter_name          = ${DRI_RENDER}
+output_name           = 0
+resolutions           = [3840x2160, 2560x1440, 1920x1080]
+fps                   = [144, 60, 30]
+min_log_level         = info
+SUNEOF
+
+"$SUN_BIN" --creds "${SUNSHINE_USER}" "${SUNSHINE_PASS}" 2>/dev/null \
+    && log "Sunshine creds set: ${SUNSHINE_USER} / ${SUNSHINE_PASS}" \
+    || warn "sunshine --creds failed — use web UI at https://127.0.0.1:47990"
+
+###############################################################################
+hdr "6 — GAME ASSETS"
+###############################################################################
 mkdir -p "$FERAL_SAVES" "$FERAL_PACKS" "${PROTON_BASE}/save_games" "${PROTON_BASE}/pack"
 SC=0; PC=0
 while IFS= read -r -d '' f; do
-  cp "$f" "$FERAL_SAVES/"              2>/dev/null || true
-  cp "$f" "${PROTON_BASE}/save_games/" 2>/dev/null || true
-  SC=$((SC+1))
-done < <(find /workspace -maxdepth 4 -name "*.save" -print0 2>/dev/null || true)
+    cp "$f" "$FERAL_SAVES/"              2>/dev/null || true
+    cp "$f" "${PROTON_BASE}/save_games/" 2>/dev/null || true
+    SC=$((SC+1))
+done < <(find /workspace -maxdepth 4 -name "*.save" -print0 2>/dev/null)
 while IFS= read -r -d '' f; do
-  cp "$f" "$FERAL_PACKS/"        2>/dev/null || true
-  cp "$f" "${PROTON_BASE}/pack/" 2>/dev/null || true
-  PC=$((PC+1))
-done < <(find /workspace -maxdepth 4 -name "*.pack" -print0 2>/dev/null || true)
+    cp "$f" "$FERAL_PACKS/"        2>/dev/null || true
+    cp "$f" "${PROTON_BASE}/pack/" 2>/dev/null || true
+    PC=$((PC+1))
+done < <(find /workspace -maxdepth 4 -name "*.pack" -print0 2>/dev/null)
 log "Assets: $SC .save  $PC .pack"
 
-# 8. B2 SYNC
-step "8. B2 SYNC"
+###############################################################################
+hdr "7 — B2 SYNC"
+###############################################################################
 if [ -n "$B2_KEY_ID" ] && [ -n "$B2_APP_KEY" ]; then
-  command -v rclone >/dev/null 2>&1 || curl -fsSL https://rclone.org/install.sh | bash >> "$LOG" 2>&1
-  mkdir -p /root/.config/rclone
-  cat > /root/.config/rclone/rclone.conf << RCONF
+    command -v rclone &>/dev/null || curl -fsSL https://rclone.org/install.sh | bash 2>/dev/null || true
+    mkdir -p /root/.config/rclone
+    cat > /root/.config/rclone/rclone.conf << RCONF
 [b2funfun]
 type = s3
 provider = Other
@@ -214,45 +271,47 @@ endpoint = ${B2_ENDPOINT}
 acl = private
 no_check_bucket = true
 RCONF
-  rclone copy "b2funfun:${B2_BUCKET}/saves/" "$FERAL_SAVES/" 2>/dev/null || warn "B2 pull empty"
-  rclone copy "b2funfun:${B2_BUCKET}/packs/" "$FERAL_PACKS/" 2>/dev/null || true
-  cat > /usr/local/bin/b2-sync.sh << SYNC
+    rclone copy "b2funfun:${B2_BUCKET}/saves/" "$FERAL_SAVES/" 2>/dev/null || warn "B2 saves pull empty"
+    rclone copy "b2funfun:${B2_BUCKET}/packs/" "$FERAL_PACKS/" 2>/dev/null || true
+    cat > /usr/local/bin/b2-sync.sh << SYNCEOF
 #!/usr/bin/env bash
-rclone sync "$FERAL_SAVES/" "b2funfun:${B2_BUCKET}/saves/" --log-file="$LOG_DIR/b2.log"
-rclone sync "$FERAL_PACKS/" "b2funfun:${B2_BUCKET}/packs/" --log-file="$LOG_DIR/b2.log"
-echo "[B2 \$(date +%H:%M:%S)] done" >> "$LOG_DIR/b2.log"
-SYNC
-  chmod +x /usr/local/bin/b2-sync.sh
-  (crontab -l 2>/dev/null; echo "*/15 * * * * /usr/local/bin/b2-sync.sh") | sort -u | crontab -
-  log "B2 configured"
+rclone sync "${FERAL_SAVES}/" "b2funfun:${B2_BUCKET}/saves/" --log-file="${LOG_DIR}/b2.log"
+rclone sync "${FERAL_PACKS}/" "b2funfun:${B2_BUCKET}/packs/" --log-file="${LOG_DIR}/b2.log"
+SYNCEOF
+    chmod +x /usr/local/bin/b2-sync.sh
+    (crontab -l 2>/dev/null; echo "*/15 * * * * /usr/local/bin/b2-sync.sh") | sort -u | crontab - 2>/dev/null || true
+    log "B2 configured"
 else
-  warn "B2 skipped — export B2_KEY_ID + B2_APP_KEY"
+    warn "B2 skipped — set B2_KEY_ID + B2_APP_KEY env vars to enable"
 fi
 
-# 9. PULSEAUDIO
-step "9. PULSEAUDIO"
-pulseaudio --daemonize --exit-idle-time=-1 >> "$LOG" 2>&1 || true
+###############################################################################
+hdr "8 — PULSEAUDIO"
+###############################################################################
+pulseaudio --kill 2>/dev/null || true
 sleep 1
-pactl load-module module-null-sink sink_name=virtual_out >> "$LOG" 2>&1 || true
-pactl set-default-sink virtual_out >> "$LOG" 2>&1 || true
+pulseaudio --daemonize --exit-idle-time=-1 2>/dev/null || true
+sleep 1
+pactl load-module module-null-sink sink_name=virtual_out 2>/dev/null || true
+pactl set-default-sink virtual_out 2>/dev/null || true
 log "PulseAudio virtual sink ready"
 
-# 10. SUPERVISORD
-step "10. SUPERVISORD"
-pip3 install --quiet supervisor >> "$LOG" 2>&1
-SUPD=$(command -v supervisord 2>/dev/null \
-  || find /usr/local/bin /root/.local/bin /usr/bin -name supervisord 2>/dev/null | head -1 || true)
-[ -z "$SUPD" ] && die "supervisord not found after pip3 install"
-SUPC=$(command -v supervisorctl 2>/dev/null \
-  || find /usr/local/bin /root/.local/bin /usr/bin -name supervisorctl 2>/dev/null | head -1 || true)
-[ -n "$SUPC" ] && ln -sf "$SUPC" /usr/local/bin/supervisorctl 2>/dev/null || true
+###############################################################################
+hdr "9 — SUPERVISOR"
+###############################################################################
+mkdir -p /run/user/0; chmod 700 /run/user/0
 
-mkdir -p /etc/supervisor
+XVFB_BIN=$(command -v Xvfb 2>/dev/null || find /usr/bin -name Xvfb 2>/dev/null | head -1 || true)
+[ -z "$XVFB_BIN" ] && { err "Xvfb not found"; exit 1; }
+
+rm -f /etc/supervisor/conf.d/*.conf 2>/dev/null || true
+mkdir -p /etc/supervisor/conf.d
+
 cat > /etc/supervisor/supervisord.conf << SUPCONF
 [supervisord]
 nodaemon=false
 user=root
-logfile=$LOG_DIR/supervisord.log
+logfile=${LOG_DIR}/supervisord.log
 logfile_maxbytes=20MB
 loglevel=info
 pidfile=/tmp/supervisord.pid
@@ -266,73 +325,174 @@ supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface
 [supervisorctl]
 serverurl=unix:///tmp/supervisor.sock
 
-[program:xorg]
-command=Xorg ${DISP} -noreset +iglx -config /etc/X11/xorg.conf
-autostart=true
-autorestart=true
-priority=10
-startsecs=3
-stdout_logfile=$LOG_DIR/xorg.log
-stderr_logfile=$LOG_DIR/xorg.log
-environment=DISPLAY="${DISP}"
-
-[program:openbox]
-command=openbox --display ${DISP}
-autostart=true
-autorestart=true
-priority=20
-startsecs=5
-stdout_logfile=$LOG_DIR/openbox.log
-stderr_logfile=$LOG_DIR/openbox.log
-environment=DISPLAY="${DISP}"
-
-[program:sunshine]
-command=${SUNSHINE_BIN}
-autostart=true
-autorestart=true
-priority=30
-startsecs=8
-stdout_logfile=$LOG_DIR/sunshine.log
-stderr_logfile=$LOG_DIR/sunshine.log
-environment=DISPLAY="${DISP}",HOME="/root"
+[include]
+files = /etc/supervisor/conf.d/*.conf
 SUPCONF
 
-pkill -f supervisord >> "$LOG" 2>&1 || true
-sleep 1
-nohup "$SUPD" -c /etc/supervisor/supervisord.conf >> "$LOG_DIR/supervisord-boot.log" 2>&1 &
-SPID=$!
-disown $SPID
-log "supervisord PID=$SPID disowned"
+cat > /etc/supervisor/conf.d/pulseaudio.conf << 'EOF'
+[program:pulseaudio]
+command=/usr/bin/pulseaudio --system --disallow-exit --exit-idle-time=-1 --log-target=stderr
+autorestart=true
+startretries=99
+startsecs=2
+priority=5
+stdout_logfile=/workspace/gaming-logs/pulse.log
+stderr_logfile=/workspace/gaming-logs/pulse.log
+environment=HOME="/root"
+EOF
 
-# 11. VERIFY
-step "11. VERIFY"
-sleep 15
-XS="FAIL"; OS="FAIL"; SS="FAIL"
-pgrep -x Xorg     >/dev/null 2>&1 && XS="OK"
-pgrep -x openbox  >/dev/null 2>&1 && OS="OK"
-pgrep -f sunshine >/dev/null 2>&1 && SS="OK"
-POD_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "?")
+cat > /etc/supervisor/conf.d/xvfb.conf << XVEOF
+[program:xvfb]
+command=${XVFB_BIN} :${DISPLAY_NUM} -screen 0 ${RES_W}x${RES_H}x24 -ac +extension GLX +extension RANDR -noreset
+autorestart=true
+startretries=10
+startsecs=3
+priority=10
+stdout_logfile=${LOG_DIR}/xvfb.log
+stderr_logfile=${LOG_DIR}/xvfb.log
+environment=HOME="/root"
+XVEOF
 
+cat > /etc/supervisor/conf.d/openbox.conf << OBSEOF
+[program:openbox]
+command=/usr/bin/openbox-session
+autorestart=true
+startretries=5
+startsecs=3
+priority=15
+stdout_logfile=${LOG_DIR}/openbox.log
+stderr_logfile=${LOG_DIR}/openbox.log
+environment=DISPLAY=":${DISPLAY_NUM}",HOME="/root"
+OBSEOF
+
+cat > /etc/supervisor/conf.d/sunshine.conf << SSEOF
+[program:sunshine]
+command=${SUN_BIN} /root/.config/sunshine/sunshine.conf
+autorestart=true
+startretries=10
+startsecs=8
+priority=20
+stdout_logfile=${LOG_DIR}/sunshine.log
+stderr_logfile=${LOG_DIR}/sunshine.log
+environment=DISPLAY=":${DISPLAY_NUM}",HOME="/root",XDG_RUNTIME_DIR="/run/user/0",LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/usr/local/nvidia/lib64"
+SSEOF
+
+###############################################################################
+hdr "10 — LAUNCH"
+###############################################################################
+nohup "$SUPD" -c /etc/supervisor/supervisord.conf >> "${LOG_DIR}/supervisord-boot.log" 2>&1 &
+disown
+log "supervisord launched — waiting 20s..."
+sleep 20
+
+supervisorctl -c /etc/supervisor/supervisord.conf status 2>/dev/null | sed 's/^/  /' || warn "supervisorctl not responding yet"
+
+###############################################################################
+hdr "11 — VERIFY"
+###############################################################################
+PASS=0; FAIL=0
+chk() {
+    if [ "$1" = ok ]; then
+        printf "  [OK] %s\n" "$2"; PASS=$((PASS+1))
+    else
+        printf "  [!!] %s\n" "$2"; FAIL=$((FAIL+1))
+    fi
+}
+
+pgrep -x sshd &>/dev/null                         && chk ok "SSHD"                  || chk fail "SSHD"
+xdpyinfo -display ":${DISPLAY_NUM}" &>/dev/null   && chk ok "Xvfb :${DISPLAY_NUM}"  || chk fail "Xvfb — check ${LOG_DIR}/xvfb.log"
+ldconfig -p 2>/dev/null | grep -q libnvidia-encode && chk ok "NVENC in ldconfig"     || chk fail "NVENC not in ldconfig"
+[ -f "$(find /usr/lib -name 'libayatana-appindicator3.so.1' 2>/dev/null | head -1)" ] \
+    && chk ok "libayatana-appindicator3.so.1" || chk fail "libayatana-appindicator3.so.1 MISSING"
+[ -f "$(find /usr/lib -name 'libva.so.2' 2>/dev/null | head -1)" ] \
+    && chk ok "libva.so.2"                    || chk fail "libva.so.2 MISSING"
+pgrep -f sunshine &>/dev/null                      && chk ok "Sunshine running"      || chk fail "Sunshine — check ${LOG_DIR}/sunshine.log"
+
+echo "  GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1)"
+echo "  Result: ${PASS} passed / ${FAIL} failed"
+
+###############################################################################
+hdr "12 — GENERATE connect.bat"
+###############################################################################
+PUBIP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 api.ipify.org 2>/dev/null || echo "UNKNOWN")
+# RunPod exposes SSH port via RUNPOD_TCP_PORT_22 env var
+SSH_PORT="${RUNPOD_TCP_PORT_22:-22}"
+
+log "Public IP: ${PUBIP}  SSH port: ${SSH_PORT}"
+
+cat > /workspace/connect.bat << ENDBAT
+@echo off
+title RunPod Gaming — Connecting...
+echo.
+echo   ========================================
+echo    RunPod Gaming Rig — One-Click Connect
+echo   ========================================
+echo.
+
+:: Kill any old tunnel
+taskkill /F /IM ssh.exe >nul 2>&1
+
+:: Start SSH tunnel
+echo   [1/3] Opening tunnel to ${PUBIP}:${SSH_PORT}...
+start /B ssh -N ^
+  -L 47984:localhost:47984 ^
+  -L 47989:localhost:47989 ^
+  -L 47990:localhost:47990 ^
+  -L 47998:localhost:47998 ^
+  -L 47999:localhost:47999 ^
+  -L 48000:localhost:48000 ^
+  -L 48010:localhost:48010 ^
+  root@${PUBIP} -p ${SSH_PORT} ^
+  -o StrictHostKeyChecking=no ^
+  -o UserKnownHostsFile=NUL
+
+echo   [2/3] Waiting for tunnel...
+timeout /t 4 /nobreak >nul
+
+:: Launch Moonlight
+echo   [3/3] Launching Moonlight...
+start "" "C:\Program Files\Moonlight Game Streaming\Moonlight.exe"
+
+echo.
+echo   ==========================================
+echo    Tunnel OPEN. Moonlight launching.
+echo.
+echo    FIRST TIME ONLY:
+echo      1. Moonlight shows a 4-digit PIN
+echo      2. Enter it at https://127.0.0.1:47990
+echo         Login: ${SUNSHINE_USER} / ${SUNSHINE_PASS}
+echo      3. After pairing it just works forever
+echo   ==========================================
+echo.
+
+timeout /t 3 /nobreak >nul
+start https://127.0.0.1:47990
+
+echo   Press any key to DISCONNECT.
+pause >nul
+taskkill /F /IM ssh.exe >nul 2>&1
+ENDBAT
+
+chmod 644 /workspace/connect.bat
+log "connect.bat written → /workspace/connect.bat"
+
+###############################################################################
 echo ""
-echo "============================================"
-echo " DONE -- RunPod Gaming Rig v5"
-echo "============================================"
-echo " GPU      : $GPU_NAME (drv $DRV_MAJ)"
-echo " BusID    : $XORG_BUSID"
-echo " Xorg     : $XS  |  Openbox: $OS  |  Sunshine: $SS"
-echo " Logs     : $LOG_DIR/"
+echo "==========================================="
+echo " RunPod Gaming Rig v12 — ${SECONDS}s"
+echo "==========================================="
 echo ""
-echo " SSH      : ssh root@${RUNPOD_HOST} -p ${RUNPOD_SSH_PORT}"
-echo " Password : ${ROOT_PASS}"
-echo " Web UI   : https://${POD_IP}:47990  (admin / ${ROOT_PASS})"
+echo " Download connect.bat and double-click it:"
 echo ""
-echo " PowerShell tunnel:"
-echo "   ssh -N -L 47984:localhost:47984 -L 47989:localhost:47989 \\"
-echo "      -L 47990:localhost:47990 -L 48010:localhost:48010 \\"
-echo "      root@${RUNPOD_HOST} -p ${RUNPOD_SSH_PORT} -o StrictHostKeyChecking=no"
-echo "   -> Moonlight: Add PC -> 127.0.0.1"
+echo "   scp -P ${SSH_PORT} root@${PUBIP}:/workspace/connect.bat ."
 echo ""
-echo " supervisorctl -c /etc/supervisor/supervisord.conf status"
-echo " tail -f $LOG_DIR/sunshine.log"
-echo " tail -f $LOG_DIR/xorg.log"
-echo "============================================"
+echo " Or grab it from the RunPod file browser:"
+echo "   /workspace/connect.bat"
+echo ""
+echo " That's it. Double-click → tunnel opens → Moonlight launches."
+echo "==========================================="
+
+if [ -n "${JUPYTER_TOKEN:-}" ] || [ -n "${JUPYTER_RUNTIME_DIR:-}" ] || [ -n "${JPY_PARENT_PID:-}" ]; then
+    log "Jupyter detected — staying open"
+    exec sleep infinity
+fi
