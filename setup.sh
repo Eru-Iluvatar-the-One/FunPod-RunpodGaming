@@ -1,29 +1,25 @@
 #!/usr/bin/env bash
-# RunPod Gaming Rig v4
-# NVIDIA L4/L40 | Ubuntu 22.04 | Sunshine → Moonlight | 4K@144Hz
+# RunPod Gaming Rig v5
+# NVIDIA L4 | Ubuntu 22.04 | Sunshine -> Moonlight | 4K@144Hz
 
 set -e
 
-# /workspace is always writable (persistent volume)
 LOG_DIR="/workspace/gaming-logs"
 PKG_CACHE="/tmp/rp_pkgs"
 mkdir -p "$LOG_DIR" "$PKG_CACHE"
 LOG="$LOG_DIR/setup.log"
 
-# NO exec/tee/process-substitution — they die silently in bash <(wget) context
-# Just write to log manually in each step
-
-step() { MSG="=== $* ==="; echo "$MSG"; echo "$MSG" >> "$LOG"; }
-log()  { MSG="[OK] $*";   echo "$MSG"; echo "$MSG" >> "$LOG"; }
-warn() { MSG="[WARN] $*"; echo "$MSG"; echo "$MSG" >> "$LOG"; }
-die()  { MSG="[FATAL line $1] $2"; echo "$MSG"; echo "$MSG" >> "$LOG"; exit 1; }
+step() { echo "=== $* ==="; echo "=== $* ===" >> "$LOG"; }
+log()  { echo "[OK] $*";    echo "[OK] $*"    >> "$LOG"; }
+warn() { echo "[WARN] $*";  echo "[WARN] $*"  >> "$LOG"; }
+die()  { echo "[FATAL] $*"; echo "[FATAL] $*" >> "$LOG"; exit 1; }
 
 echo "============================================"
-echo " RunPod Gaming Rig v4 — $(date)"
+echo " RunPod Gaming Rig v5 -- $(date)"
 echo " Log: $LOG"
 echo "============================================"
 
-# ── CONFIG ────────────────────────────────────────────────────────────────────
+# CONFIG
 ROOT_PASS="gondolin123"
 DISP=":99"
 SUNSHINE_VER="v0.23.1"
@@ -38,27 +34,26 @@ FERAL_SAVES="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User 
 FERAL_PACKS="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User Data/packs"
 PROTON_BASE="/root/.steam/steam/steamapps/compatdata/779340/pfx/drive_c/users/steamuser/Documents/My Games/Total War THREE KINGDOMS"
 
-# ── 1. SSH ────────────────────────────────────────────────────────────────────
+# 1. SSH
 step "1. SSH"
 echo "root:${ROOT_PASS}" | chpasswd >> "$LOG" 2>&1
 CFG=/etc/ssh/sshd_config
 sed -i 's/^#*\s*PasswordAuthentication\s.*/PasswordAuthentication yes/' "$CFG"
-sed -i 's/^#*\s*PermitRootLogin\s.*/PermitRootLogin yes/'               "$CFG"
+sed -i 's/^#*\s*PermitRootLogin\s.*/PermitRootLogin yes/' "$CFG"
 grep -q "^PasswordAuthentication yes" "$CFG" || echo "PasswordAuthentication yes" >> "$CFG"
 grep -q "^PermitRootLogin yes"        "$CFG" || echo "PermitRootLogin yes"        >> "$CFG"
 service ssh restart >> "$LOG" 2>&1 \
   || systemctl restart ssh >> "$LOG" 2>&1 \
   || /etc/init.d/ssh restart >> "$LOG" 2>&1 \
-  || warn "SSH restart failed — check $LOG"
-log "SSH done (root:${ROOT_PASS})"
+  || warn "SSH restart failed"
+log "SSH OK (root:${ROOT_PASS})"
 
-# ── 2. GPU ────────────────────────────────────────────────────────────────────
+# 2. GPU
 step "2. GPU DETECTION"
 GPU_NAME=$(nvidia-smi --query-gpu=name           --format=csv,noheader 2>/dev/null | head -1 || echo "UNKNOWN")
-DRV_FULL=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 || echo "550.0")
+DRV_FULL=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 || echo "570.0")
 DRV_MAJ=$(echo "$DRV_FULL" | cut -d. -f1)
 PCI_RAW=$(nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader 2>/dev/null | head -1 \
-          || lspci -D 2>/dev/null | grep -i nvidia | head -1 | awk '{print $1}' \
           || echo "0000:00:1e.0")
 BUS=$(echo "$PCI_RAW" | awk -F: '{if(NF==4)print $2; else print $1}' | tr -d ' ')
 DEV=$(echo "$PCI_RAW" | awk -F: '{if(NF==4)print $3; else print $2}' | cut -d. -f1 | tr -d ' ')
@@ -66,56 +61,53 @@ FUN=$(echo "$PCI_RAW" | awk -F. '{print $NF}' | tr -d ' ')
 XORG_BUSID="PCI:$((16#$BUS)):$((16#$DEV)):$((16#$FUN))"
 log "GPU=$GPU_NAME  DRV=$DRV_MAJ  BusID=$XORG_BUSID"
 
-# ── 3. PACKAGES ───────────────────────────────────────────────────────────────
-step "3. PACKAGES (EXDEV-safe dpkg-deb -x)"
+# 3. PACKAGES
+step "3. PACKAGES"
+# Enable universe for openbox/pulseaudio
+add-apt-repository -y universe >> "$LOG" 2>&1 || true
 DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "$LOG" 2>&1 || warn "apt-get update failed"
 
-deb_install() {
+apt_install() {
   local pkg="$1" chk="${2:-}"
-  if [ -n "$chk" ] && command -v "$chk" >/dev/null 2>&1; then
-    log "  skip $pkg (found $chk)"; return 0
-  fi
-  cd "$PKG_CACHE"
-  if apt-get download "$pkg" -y >> "$LOG" 2>&1; then
-    local f; f=$(ls -t "${pkg}"*.deb 2>/dev/null | head -1 || true)
-    if [ -n "$f" ]; then
-      dpkg-deb -x "$f" / >> "$LOG" 2>&1 && log "  extracted $pkg" || warn "  dpkg-deb failed: $pkg"
-    else
-      warn "  deb not found for: $pkg"
-    fi
-  else
-    warn "  apt download failed: $pkg"
-  fi
-  cd - >/dev/null
+  [ -n "$chk" ] && command -v "$chk" >/dev/null 2>&1 && { log "  skip $pkg"; return 0; }
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$pkg" >> "$LOG" 2>&1 \
+    && log "  installed $pkg" \
+    || warn "  failed $pkg"
 }
 
-deb_install "xserver-xorg-core"                    "Xorg"
-deb_install "xserver-xorg-video-nvidia-${DRV_MAJ}" ""
-deb_install "x11-xserver-utils"                    "xrandr"
-deb_install "openbox"                              "openbox"
-deb_install "pulseaudio"                           "pulseaudio"
-deb_install "xkb-data"                             ""
+apt_install "xserver-xorg-core"    "Xorg"
+apt_install "x11-xserver-utils"    "xrandr"
+apt_install "openbox"              "openbox"
+apt_install "pulseaudio"           "pulseaudio"
+apt_install "xkb-data"             ""
+apt_install "xauth"                ""
+# nvidia DDX — version-matched; warn-only if missing (host driver handles rendering)
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  "xserver-xorg-video-nvidia-${DRV_MAJ}" >> "$LOG" 2>&1 \
+  || warn "xserver-xorg-video-nvidia-${DRV_MAJ} not in apt — Xorg will use modesetting driver"
 
+# Sunshine — curl, not wget
 if ! command -v sunshine >/dev/null 2>&1; then
   log "Downloading Sunshine ${SUNSHINE_VER}..."
-  wget -q --show-progress -O "$PKG_CACHE/sunshine.deb" "$SUNSHINE_URL" \
-    || die $LINENO "Sunshine download failed"
+  curl -fsSL -o "$PKG_CACHE/sunshine.deb" "$SUNSHINE_URL" \
+    || die "Sunshine download failed"
+  # dpkg install tries hardlinks across filesystems if /tmp != / — use -x to extract directly
   dpkg-deb -x "$PKG_CACHE/sunshine.deb" / >> "$LOG" 2>&1
   chmod +x /usr/bin/sunshine 2>/dev/null || true
 fi
 SUNSHINE_BIN=$(command -v sunshine 2>/dev/null \
   || find /usr/bin /usr/local/bin -name sunshine 2>/dev/null | head -1 || true)
-[ -z "$SUNSHINE_BIN" ] && die $LINENO "sunshine binary not found after extraction"
+[ -z "$SUNSHINE_BIN" ] && die "sunshine binary not found"
 ldconfig >> "$LOG" 2>&1
 log "Sunshine at $SUNSHINE_BIN"
 
-# ── 4. HARDWARE ENCODER ───────────────────────────────────────────────────────
+# 4. HARDWARE ENCODER
 step "4. HARDWARE ENCODER"
 mkdir -p /dev/dri
 [ -e /dev/dri/card0 ]      || mknod -m 660 /dev/dri/card0      c 226 0
 [ -e /dev/dri/renderD128 ] || mknod -m 660 /dev/dri/renderD128 c 226 128
 chown root:video /dev/dri/* 2>/dev/null || true
-log "/dev/dri: card0 + renderD128"
+log "/dev/dri nodes OK"
 
 NVENC=$(find /usr/lib /usr/local/lib /usr/local/nvidia/lib64 \
   -name "libnvidia-encode.so.*" 2>/dev/null | grep -v 'so\.1$' | sort -V | tail -1 || true)
@@ -124,12 +116,12 @@ if [ -n "$NVENC" ]; then
   ln -sf "$NVENC" /usr/lib/x86_64-linux-gnu/libnvidia-encode.so.1
   ln -sf "$NVENC" /usr/lib/x86_64-linux-gnu/libnvidia-encode.so
   ldconfig >> "$LOG" 2>&1
-  log "libnvidia-encode.so.1 → $NVENC"
+  log "libnvidia-encode -> $NVENC"
 else
-  warn "libnvidia-encode not found — NVENC may fail (check: find / -name 'libnvidia-encode*')"
+  warn "libnvidia-encode not found — NVENC may fail"
 fi
 
-# ── 5. XORG ───────────────────────────────────────────────────────────────────
+# 5. XORG CONFIG
 step "5. XORG CONFIG"
 mkdir -p /etc/X11
 cat > /etc/X11/xorg.conf << XORGEOF
@@ -173,7 +165,7 @@ EndSection
 XORGEOF
 log "xorg.conf written (BusID=$XORG_BUSID)"
 
-# ── 6. SUNSHINE ───────────────────────────────────────────────────────────────
+# 6. SUNSHINE CONFIG
 step "6. SUNSHINE CONFIG"
 mkdir -p /root/.config/sunshine
 cat > /root/.config/sunshine/sunshine.conf << SCONF
@@ -191,7 +183,7 @@ SCONF
 "$SUNSHINE_BIN" --creds admin "${ROOT_PASS}" >> "$LOG" 2>&1 || warn "sunshine --creds failed — set via web UI"
 log "Sunshine configured"
 
-# ── 7. GAME ASSETS ────────────────────────────────────────────────────────────
+# 7. GAME ASSETS
 step "7. GAME ASSETS"
 mkdir -p "$FERAL_SAVES" "$FERAL_PACKS" "${PROTON_BASE}/save_games" "${PROTON_BASE}/pack"
 SC=0; PC=0
@@ -207,7 +199,7 @@ while IFS= read -r -d '' f; do
 done < <(find /workspace -maxdepth 4 -name "*.pack" -print0 2>/dev/null || true)
 log "Assets: $SC .save  $PC .pack"
 
-# ── 8. B2 ─────────────────────────────────────────────────────────────────────
+# 8. B2 SYNC
 step "8. B2 SYNC"
 if [ -n "$B2_KEY_ID" ] && [ -n "$B2_APP_KEY" ]; then
   command -v rclone >/dev/null 2>&1 || curl -fsSL https://rclone.org/install.sh | bash >> "$LOG" 2>&1
@@ -222,7 +214,7 @@ endpoint = ${B2_ENDPOINT}
 acl = private
 no_check_bucket = true
 RCONF
-  rclone copy "b2funfun:${B2_BUCKET}/saves/" "$FERAL_SAVES/" 2>/dev/null || warn "B2 pull empty (first run?)"
+  rclone copy "b2funfun:${B2_BUCKET}/saves/" "$FERAL_SAVES/" 2>/dev/null || warn "B2 pull empty"
   rclone copy "b2funfun:${B2_BUCKET}/packs/" "$FERAL_PACKS/" 2>/dev/null || true
   cat > /usr/local/bin/b2-sync.sh << SYNC
 #!/usr/bin/env bash
@@ -232,12 +224,12 @@ echo "[B2 \$(date +%H:%M:%S)] done" >> "$LOG_DIR/b2.log"
 SYNC
   chmod +x /usr/local/bin/b2-sync.sh
   (crontab -l 2>/dev/null; echo "*/15 * * * * /usr/local/bin/b2-sync.sh") | sort -u | crontab -
-  log "B2 configured — cron every 15min"
+  log "B2 configured"
 else
-  warn "B2 skipped — export B2_KEY_ID + B2_APP_KEY before running"
+  warn "B2 skipped — export B2_KEY_ID + B2_APP_KEY"
 fi
 
-# ── 9. PULSEAUDIO ─────────────────────────────────────────────────────────────
+# 9. PULSEAUDIO
 step "9. PULSEAUDIO"
 pulseaudio --daemonize --exit-idle-time=-1 >> "$LOG" 2>&1 || true
 sleep 1
@@ -245,12 +237,12 @@ pactl load-module module-null-sink sink_name=virtual_out >> "$LOG" 2>&1 || true
 pactl set-default-sink virtual_out >> "$LOG" 2>&1 || true
 log "PulseAudio virtual sink ready"
 
-# ── 10. SUPERVISORD ───────────────────────────────────────────────────────────
+# 10. SUPERVISORD
 step "10. SUPERVISORD"
 pip3 install --quiet supervisor >> "$LOG" 2>&1
 SUPD=$(command -v supervisord 2>/dev/null \
   || find /usr/local/bin /root/.local/bin /usr/bin -name supervisord 2>/dev/null | head -1 || true)
-[ -z "$SUPD" ] && die $LINENO "supervisord not found after pip3 install"
+[ -z "$SUPD" ] && die "supervisord not found after pip3 install"
 SUPC=$(command -v supervisorctl 2>/dev/null \
   || find /usr/local/bin /root/.local/bin /usr/bin -name supervisorctl 2>/dev/null | head -1 || true)
 [ -n "$SUPC" ] && ln -sf "$SUPC" /usr/local/bin/supervisorctl 2>/dev/null || true
@@ -312,7 +304,7 @@ SPID=$!
 disown $SPID
 log "supervisord PID=$SPID disowned"
 
-# ── 11. VERIFY ────────────────────────────────────────────────────────────────
+# 11. VERIFY
 step "11. VERIFY"
 sleep 15
 XS="FAIL"; OS="FAIL"; SS="FAIL"
@@ -323,7 +315,7 @@ POD_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "?")
 
 echo ""
 echo "============================================"
-echo " DONE — RunPod Gaming Rig v4"
+echo " DONE -- RunPod Gaming Rig v5"
 echo "============================================"
 echo " GPU      : $GPU_NAME (drv $DRV_MAJ)"
 echo " BusID    : $XORG_BUSID"
@@ -334,7 +326,7 @@ echo " SSH      : ssh root@${RUNPOD_HOST} -p ${RUNPOD_SSH_PORT}"
 echo " Password : ${ROOT_PASS}"
 echo " Web UI   : https://${POD_IP}:47990  (admin / ${ROOT_PASS})"
 echo ""
-echo " PowerShell tunnel (Windows 10 LTSC):"
+echo " PowerShell tunnel:"
 echo "   ssh -N -L 47984:localhost:47984 -L 47989:localhost:47989 \\"
 echo "      -L 47990:localhost:47990 -L 48010:localhost:48010 \\"
 echo "      root@${RUNPOD_HOST} -p ${RUNPOD_SSH_PORT} -o StrictHostKeyChecking=no"
