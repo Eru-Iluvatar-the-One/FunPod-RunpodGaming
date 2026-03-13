@@ -22,21 +22,14 @@ One-shot bash script: Xorg headless + Sunshine + supervisord → Moonlight strea
 Game: Total War: Three Kingdoms (Steam 779340, Feral port).
 Save sync: Backblaze B2 bucket `Funfun` via rclone.
 
-## Script Status: v5 — BROKEN
-Current failure: container has NO `/usr/bin/curl`, NO `/usr/bin/wget`, NO `/usr/bin/bash`.
-- `bash` is at `/bin/bash`
-- `curl`/`wget` not installed at all
-- Process substitution `bash <(...)` fails because `/usr/bin/bash` missing
+## Script Status: v6 — PUSHED, UNTESTED
 
-**FIX NEEDED in v6:**
-Add at very top of script (before any downloads):
-```bash
-apt-get install -y curl wget 2>/dev/null || true
-```
-Then run command becomes:
+**Run command (python3 always exists in image):**
 ```bash
 python3 -c "import urllib.request; open('/tmp/s.sh','wb').write(urllib.request.urlopen('https://raw.githubusercontent.com/Eru-Iluvatar-the-One/Runpod-Gaming/main/setup.sh').read())" && /bin/bash /tmp/s.sh
 ```
+
+**v6 fix:** Added step 0 — `apt-get install -y curl wget 2>/dev/null || true` before any downloads.
 
 ## Script Config Values
 - `ROOT_PASS=gondolin123`
@@ -70,8 +63,8 @@ Note: UDP 47998-48000 needed for video — consider Tailscale or force Moonlight
 - v3: `exec &> >(tee ...)` dies silently in `bash <(wget)` context
 - v4: wget doesn't exist in image
 - v5: curl doesn't exist, bash not at /usr/bin/bash
+- v6: fixed — apt-get installs curl/wget as step 0; python3 used to fetch script
 
 ## Next Action
-Push v6: install curl+wget at top, update run command to use python3 download.
-Then verify: Xorg OK, Sunshine OK, web UI reachable.
+Run v6 via python3 command above. Verify: Xorg OK, Sunshine OK, web UI reachable.
 Then: SSH tunnel from Win10, Moonlight pair, launch game.
