@@ -26,22 +26,45 @@ W "Starting pod..."
 $startQ = '{"query":"mutation{podResume(input:{podId:\"' + $POD_ID + '\",gpuCount:1}){id desiredStatus}}"}'
 try { Invoke-RestMethod "https://api.runpod.io/graphql?api_key=$API_KEY" -Method POST -ContentType "application/json" -Body $startQ | Out-Null } catch {}
 
-# ── Poll GraphQL for SSH port ───────────────────────────────────────
+# ── Poll for SSH port ────────────────────────────────────────────────
+# Strategy: REST first, fallback to pod-specific GraphQL query.
+# myself{pods} is BROKEN on RunPod — it returns RUNNING but never populates runtime.ports.
 W "Waiting for pod SSH port..."
 $ip = ""; $port = 0; $tries = 0
+
 do {
     Start-Sleep 5; $tries++
-    if ($tries -gt 60) { W "Timed out." "Red"; Read-Host; exit 1 }
+    if ($tries -gt 60) { W "Timed out waiting for ports." "Red"; Read-Host; exit 1 }
+
+    # ── Attempt 1: RunPod REST API ───────────────────────────────────
     try {
-        $q = '{"query":"{myself{pods{id desiredStatus runtime{ports{ip publicPort privatePort}}}}}"}'
-        $r = Invoke-RestMethod "https://api.runpod.io/graphql?api_key=$API_KEY" -Method POST -ContentType "application/json" -Body $q
-        $pod = $r.data.myself.pods | Where-Object { $_.id -eq $POD_ID } | Select-Object -First 1
-        if ($pod -and $pod.desiredStatus -eq "RUNNING" -and $pod.runtime -and $pod.runtime.ports) {
-            $sp = $pod.runtime.ports | Where-Object { $_.privatePort -eq 22 } | Select-Object -First 1
-            if ($sp) { $ip = $sp.ip; $port = $sp.publicPort }
+        $restHeaders = @{ "Authorization" = "Bearer $API_KEY" }
+        $r = Invoke-RestMethod "https://api.runpod.io/v2/pod/$POD_ID" `
+            -Headers $restHeaders -ErrorAction Stop
+        $sp = $r.runtime.ports | Where-Object { $_.privatePort -eq 22 } | Select-Object -First 1
+        if ($sp -and $sp.ip -and $sp.publicPort) {
+            $ip = $sp.ip; $port = $sp.publicPort
         }
-    } catch {}
-    W "Waiting... ($tries)"
+    } catch { W "REST attempt $tries failed: $_" "DarkGray" }
+
+    # ── Attempt 2: pod-specific GraphQL (NOT myself{pods}) ───────────
+    if (-not $ip) {
+        try {
+            $q = '{"query":"{ pod(input: { podId: \"' + $POD_ID + '\" }) { id desiredStatus runtime { ports { ip publicPort privatePort } } } }"}'
+            $r = Invoke-RestMethod "https://api.runpod.io/graphql?api_key=$API_KEY" `
+                -Method POST -ContentType "application/json" -Body $q -ErrorAction Stop
+            $pod = $r.data.pod
+            if ($pod -and $pod.desiredStatus -eq "RUNNING" -and $pod.runtime -and $pod.runtime.ports) {
+                $sp = $pod.runtime.ports | Where-Object { $_.privatePort -eq 22 } | Select-Object -First 1
+                if ($sp -and $sp.ip -and $sp.publicPort) {
+                    $ip = $sp.ip; $port = $sp.publicPort
+                }
+            }
+        } catch { W "GQL attempt $tries failed: $_" "DarkGray" }
+    }
+
+    if (-not $ip) { W "Waiting... ($tries)" }
+
 } while (-not $ip)
 
 W "SSH at ${ip}:${port} — pushing Parsec setup..."
