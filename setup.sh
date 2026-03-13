@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  RunPod Gaming Rig v12
+#  RunPod Gaming Rig v13 — Pathfinder: WotR
 #  NVIDIA L4 | Ubuntu 22.04 | Sunshine → Moonlight | 4K@144Hz
-#
-#  v12:
-#    - Generate /workspace/connect.bat (one-click tunnel + Moonlight launch)
-#    - Dynamic public IP + SSH port detection
-#    - Clean footer: just download connect.bat
 ###############################################################################
 
 mkdir -p /workspace/gaming-logs
@@ -23,13 +18,15 @@ RES_W=3840; RES_H=2160; RES_HZ=144
 ROOT_PASS="gondolin123"
 SUNSHINE_USER="admin"
 SUNSHINE_PASS="gondolin123"
-B2_BUCKET="Funfun"
+B2_BUCKET="FunFun"
 B2_ENDPOINT="${B2_ENDPOINT:-s3.us-east-005.backblazeb2.com}"
 B2_KEY_ID="${B2_KEY_ID:-}"
 B2_APP_KEY="${B2_APP_KEY:-}"
-FERAL_SAVES="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User Data/Save Games"
-FERAL_PACKS="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User Data/packs"
-PROTON_BASE="/root/.steam/steam/steamapps/compatdata/779340/pfx/drive_c/users/steamuser/Documents/My Games/Total War THREE KINGDOMS"
+
+# WotR paths — native Linux + Proton fallback
+WOTR_SAVES="/root/.local/share/unity3d/Owlcat Games/Pathfinder Wrath Of The Righteous/Saved Games"
+WOTR_SAVES_PROTON="/root/.steam/steam/steamapps/compatdata/1184370/pfx/drive_c/users/steamuser/AppData/LocalLow/Owlcat Games/Pathfinder Wrath Of The Righteous/Saved Games"
+WOTR_MODS="/root/.steam/steam/steamapps/common/Pathfinder Second Adventure/Mods"
 
 # ── helpers ───────────────────────────────────────────────────
 G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; B='\033[1;34m'; N='\033[0m'
@@ -239,30 +236,28 @@ SUNEOF
     || warn "sunshine --creds failed — use web UI at https://127.0.0.1:47990"
 
 ###############################################################################
-hdr "6 — GAME ASSETS"
+hdr "6 — GAME ASSETS (WotR)"
 ###############################################################################
-mkdir -p "$FERAL_SAVES" "$FERAL_PACKS" "${PROTON_BASE}/save_games" "${PROTON_BASE}/pack"
-SC=0; PC=0
+mkdir -p "$WOTR_SAVES" "$WOTR_SAVES_PROTON" "$WOTR_MODS" "$LOG_DIR"
+
+# Copy any .save files staged in /workspace (e.g. from RunPod file browser upload)
+SC=0
 while IFS= read -r -d '' f; do
-    cp "$f" "$FERAL_SAVES/"              2>/dev/null || true
-    cp "$f" "${PROTON_BASE}/save_games/" 2>/dev/null || true
+    cp -n "$f" "$WOTR_SAVES/" 2>/dev/null || true
+    cp -n "$f" "$WOTR_SAVES_PROTON/" 2>/dev/null || true
     SC=$((SC+1))
 done < <(find /workspace -maxdepth 4 -name "*.save" -print0 2>/dev/null)
-while IFS= read -r -d '' f; do
-    cp "$f" "$FERAL_PACKS/"        2>/dev/null || true
-    cp "$f" "${PROTON_BASE}/pack/" 2>/dev/null || true
-    PC=$((PC+1))
-done < <(find /workspace -maxdepth 4 -name "*.pack" -print0 2>/dev/null)
-log "Assets: $SC .save  $PC .pack"
+log "Workspace .save files staged: $SC"
 
 ###############################################################################
-hdr "7 — B2 SYNC"
+hdr "7 — B2 SYNC (WotR saves)"
 ###############################################################################
 if [ -n "$B2_KEY_ID" ] && [ -n "$B2_APP_KEY" ]; then
     command -v rclone &>/dev/null || curl -fsSL https://rclone.org/install.sh | bash 2>/dev/null || true
+
     mkdir -p /root/.config/rclone
     cat > /root/.config/rclone/rclone.conf << RCONF
-[b2funfun]
+[b2]
 type = s3
 provider = Other
 access_key_id = ${B2_KEY_ID}
@@ -271,18 +266,26 @@ endpoint = ${B2_ENDPOINT}
 acl = private
 no_check_bucket = true
 RCONF
-    rclone copy "b2funfun:${B2_BUCKET}/saves/" "$FERAL_SAVES/" 2>/dev/null || warn "B2 saves pull empty"
-    rclone copy "b2funfun:${B2_BUCKET}/packs/" "$FERAL_PACKS/" 2>/dev/null || true
-    cat > /usr/local/bin/b2-sync.sh << SYNCEOF
+
+    # Pull latest saves from B2 on pod start
+    rclone copy "b2:${B2_BUCKET}/wotr/saves/" "$WOTR_SAVES/" --update 2>/dev/null \
+        && log "B2 saves pulled → $WOTR_SAVES" \
+        || warn "B2 saves pull empty or failed"
+    rclone copy "b2:${B2_BUCKET}/wotr/saves/" "$WOTR_SAVES_PROTON/" --update 2>/dev/null || true
+
+    # Sync script
+    cat > /usr/local/bin/wotr-b2-sync.sh << SYNCEOF
 #!/usr/bin/env bash
-rclone sync "${FERAL_SAVES}/" "b2funfun:${B2_BUCKET}/saves/" --log-file="${LOG_DIR}/b2.log"
-rclone sync "${FERAL_PACKS}/" "b2funfun:${B2_BUCKET}/packs/" --log-file="${LOG_DIR}/b2.log"
+rclone sync "${WOTR_SAVES}/" "b2:${B2_BUCKET}/wotr/saves/" \
+    --log-file="${LOG_DIR}/b2.log" --log-level INFO 2>/dev/null || true
 SYNCEOF
-    chmod +x /usr/local/bin/b2-sync.sh
-    (crontab -l 2>/dev/null; echo "*/15 * * * * /usr/local/bin/b2-sync.sh") | sort -u | crontab - 2>/dev/null || true
-    log "B2 configured"
+    chmod +x /usr/local/bin/wotr-b2-sync.sh
+
+    # Cron: every 5 min
+    (crontab -l 2>/dev/null | grep -v wotr-b2-sync; echo "*/5 * * * * /usr/local/bin/wotr-b2-sync.sh") | crontab - 2>/dev/null || true
+    log "B2 configured — syncing WotR saves every 5 min"
 else
-    warn "B2 skipped — set B2_KEY_ID + B2_APP_KEY env vars to enable"
+    warn "B2 skipped — set B2_KEY_ID + B2_APP_KEY env vars on the pod to enable"
 fi
 
 ###############################################################################
@@ -415,7 +418,6 @@ echo "  Result: ${PASS} passed / ${FAIL} failed"
 hdr "12 — GENERATE connect.bat"
 ###############################################################################
 PUBIP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 api.ipify.org 2>/dev/null || echo "UNKNOWN")
-# RunPod exposes SSH port via RUNPOD_TCP_PORT_22 env var
 SSH_PORT="${RUNPOD_TCP_PORT_22:-22}"
 
 log "Public IP: ${PUBIP}  SSH port: ${SSH_PORT}"
@@ -429,10 +431,8 @@ echo    RunPod Gaming Rig — One-Click Connect
 echo   ========================================
 echo.
 
-:: Kill any old tunnel
 taskkill /F /IM ssh.exe >nul 2>&1
 
-:: Start SSH tunnel
 echo   [1/3] Opening tunnel to ${PUBIP}:${SSH_PORT}...
 start /B ssh -N ^
   -L 47984:localhost:47984 ^
@@ -449,7 +449,6 @@ start /B ssh -N ^
 echo   [2/3] Waiting for tunnel...
 timeout /t 4 /nobreak >nul
 
-:: Launch Moonlight
 echo   [3/3] Launching Moonlight...
 start "" "C:\Program Files\Moonlight Game Streaming\Moonlight.exe"
 
@@ -479,17 +478,10 @@ log "connect.bat written → /workspace/connect.bat"
 ###############################################################################
 echo ""
 echo "==========================================="
-echo " RunPod Gaming Rig v12 — ${SECONDS}s"
+echo " RunPod Gaming Rig v13 (WotR) — ${SECONDS}s"
 echo "==========================================="
 echo ""
-echo " Download connect.bat and double-click it:"
-echo ""
-echo "   scp -P ${SSH_PORT} root@${PUBIP}:/workspace/connect.bat ."
-echo ""
-echo " Or grab it from the RunPod file browser:"
-echo "   /workspace/connect.bat"
-echo ""
-echo " That's it. Double-click → tunnel opens → Moonlight launches."
+echo " scp -P ${SSH_PORT} root@${PUBIP}:/workspace/connect.bat ."
 echo "==========================================="
 
 if [ -n "${JUPYTER_TOKEN:-}" ] || [ -n "${JUPYTER_RUNTIME_DIR:-}" ] || [ -n "${JPY_PARENT_PID:-}" ]; then
