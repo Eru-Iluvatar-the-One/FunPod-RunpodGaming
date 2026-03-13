@@ -60,7 +60,7 @@ try {
             $sp=$r.data.pod.runtime.ports|Where-Object{$_.privatePort-eq 22}|Select-Object -First 1
             if($sp -and $sp.ip){$ip=$sp.ip;$port=$sp.publicPort;Write-Host ">> GQL: ${ip}:${port}";WC $ip $port;break}
             Write-Host ">> $($r.data.pod.desiredStatus) / no ports (try $tries)"
-        } catch { Write-Host ">> GQL err $tries: $_" }
+        } catch { Write-Host (">> GQL err $tries`: " + $_) }
         Start-Sleep 5
     } while (!$ip)
     $ErrorActionPreference="Stop"
@@ -135,15 +135,15 @@ echo PARSEC_READY
     Write-Host "=== SSH STDOUT ===`n$res"
     Write-Host "=== SSH STDERR ===`n$er"
     if($res -match "AUTH_FAILED"){throw "Parsec auth failed - check ParsecPW"}
-    if($res -notmatch "PARSEC_READY"){Write-Host "!! PARSEC_READY not seen - check stderr above" -ForegroundColor Yellow}
+    if($res -notmatch "PARSEC_READY"){Write-Host "!! PARSEC_READY not seen" -ForegroundColor Yellow}
     Write-Host ">> Launching Parsec..." -ForegroundColor Green
     Start-Process "C:\Program Files\Parsec\parsecd.exe"
     Start-Sleep 4
     Write-Host ">> Done. Click FunFunPod in My Computers." -ForegroundColor Green
 } catch {
-    Write-Host "`n!! ERROR: $_`n" -ForegroundColor Red
+    Write-Host ("`n!! ERROR: " + $_) -ForegroundColor Red
 }
 
 Stop-Transcript | Out-Null
-Write-Host "`nLog saved: $LOG"
+Write-Host "`nLog: $LOG"
 Read-Host "Press Enter to close"
