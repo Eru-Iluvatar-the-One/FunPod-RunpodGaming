@@ -1,28 +1,22 @@
-# INSTALL.ps1 — Right-click > Run with PowerShell (as Administrator)
+# INSTALL.ps1 — Right-click > Run as Administrator
 $dir = "C:\FunFunPod"
-Write-Host "Installing FunFunPod..." -ForegroundColor Cyan
-
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 
-$src = Join-Path $PSScriptRoot "FunFunConnect.ps1"
-if (-not (Test-Path $src)) {
-    Write-Host "ERROR: FunFunConnect.ps1 must be in the same folder as INSTALL.ps1" -ForegroundColor Red
-    Read-Host; exit 1
-}
-Copy-Item $src "$dir\FunFunConnect.ps1" -Force
+Write-Host "Downloading FunFunConnect.ps1..." -ForegroundColor Cyan
+$url = "https://raw.githubusercontent.com/Eru-Iluvatar-the-One/Runpod-Gaming/main/FunFunConnect.ps1"
+Invoke-WebRequest $url -OutFile "$dir\FunFunConnect.ps1" -UseBasicParsing
 
-# Create shortcut
+# Shortcut
 $wsh = New-Object -ComObject WScript.Shell
 $lnkPath = "$dir\FunFunPod.lnk"
 $lnk = $wsh.CreateShortcut($lnkPath)
-$lnk.TargetPath       = "powershell.exe"
+$lnk.TargetPath       = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 $lnk.Arguments        = "-ExecutionPolicy Bypass -NoProfile -File `"$dir\FunFunConnect.ps1`""
 $lnk.IconLocation     = "C:\Program Files\Parsec\parsecd.exe,0"
 $lnk.Description      = "FunFunPod"
 $lnk.WorkingDirectory = $dir
 $lnk.Save()
 
-# Desktop copy
 Copy-Item $lnkPath "$env:USERPROFILE\Desktop\FunFunPod.lnk" -Force
 Write-Host "Shortcut on Desktop." -ForegroundColor Green
 
@@ -35,8 +29,8 @@ if ($pin) {
     $pin.DoIt()
     Write-Host "Pinned to taskbar." -ForegroundColor Green
 } else {
-    Write-Host "Auto-pin failed. Right-click FunFunPod on Desktop > 'Pin to taskbar'." -ForegroundColor Yellow
+    Write-Host "Right-click FunFunPod on Desktop > Pin to taskbar" -ForegroundColor Yellow
 }
 
-Write-Host "`nDone. Click FunFunPod to connect." -ForegroundColor Green
+Write-Host "`nDone. Click FunFunPod on taskbar to play." -ForegroundColor Green
 Read-Host
