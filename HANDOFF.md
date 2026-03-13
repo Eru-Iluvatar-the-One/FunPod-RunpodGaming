@@ -2,7 +2,7 @@
 _Trigger: `BARAHIR HANDOFF runpod-gaming`_
 
 ## Identity
-Station IV. MCP active: filesystem, github, memory. Win10 LTSC client.
+Station IV. MCP active: filesystem, github, memory, terminal, Claude-in-Chrome. Win10 LTSC client.
 
 ## Pod
 - Host: `66.92.198.162` SSH port `11193`
@@ -11,6 +11,7 @@ Station IV. MCP active: filesystem, github, memory. Win10 LTSC client.
 - Image: `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`
 - Persistent: 150GB `/workspace`
 - Pod ID: `by8x28h0ciubu7`
+- **Pod is still running. Do not stop it.**
 
 ## Repo
 `https://github.com/Eru-Iluvatar-the-One/Runpod-Gaming`
@@ -21,65 +22,35 @@ Single file: `setup.sh`
 python3 -c "import urllib.request; open('/tmp/s.sh','wb').write(urllib.request.urlopen('https://raw.githubusercontent.com/Eru-Iluvatar-the-One/Runpod-Gaming/main/setup.sh').read())" && /bin/bash /tmp/s.sh
 ```
 
-## Current status: v8 ran, 2/7 passed. TWO BUGS REMAIN.
+---
 
-### Bug 1 — Wrong /dev/dri device paths (CRITICAL)
-xorg.conf hardcodes `card0` / `renderD128`.
-Actual nodes on this pod:
-```
-/dev/dri/card4        ← real card
-/dev/dri/renderD131   ← real render node
-```
-`mknod` is denied (not privileged). Must auto-detect actual paths.
+## Current status: v10 pushed, NOT YET RUN
 
-Fix: at runtime, detect `card*` and `renderD*` under `/dev/dri/` and use those.
-```bash
-DRI_CARD=$(ls /dev/dri/card* 2>/dev/null | head -1)
-DRI_RENDER=$(ls /dev/dri/renderD* 2>/dev/null | head -1)
-```
-Use `$DRI_RENDER` in sunshine.conf `adapter_name`.
-Xorg nvidia driver uses its own `/dev/nvidia*` path — but modesetting fallback
-was trying `card0` which doesn't exist → "no screens found".
+### What v10 does (vs v9)
+1. **Purges broken sunshine dpkg record** before any apt install — prior `dpkg -i` left half-installed state poisoning ALL apt calls
+2. **Xvfb replaces Xorg/modesetting** — container cannot open `/dev/dri/card4` (Permission denied, unprivileged). Xvfb is virtual framebuffer, no DRI/KMS needed. Sunshine x11 capture works fine with Xvfb.
+3. **libayatana + sunshine deps installed individually** — one failure no longer blocks rest
+4. **Sunshine binary extracted only** — never `dpkg -i` again (libmfx1/Intel dep is unresolvable on NVIDIA-only host)
+5. `adapter_name` uses detected `$DRI_RENDER` (renderD131)
 
-### Bug 2 — Sunshine missing libayatana-appindicator3.so.1
-```
-/usr/bin/sunshine: error while loading shared libraries: libayatana-appindicator3.so.1
-```
-Fix: `apt-get install -y libayatana-appindicator3-1` (or safe_install it).
-This is a normal apt package, no EXDEV expected.
+### First action next session
+Run v10 and paste output. If verify shows 5/5, open SSH tunnel and connect Moonlight.
 
-### Bug 3 — NVIDIA kernel module init failure in Xorg
-```
-(EE) NVIDIA: Failed to initialize the NVIDIA kernel module.
-```
-`/dev/nvidia3`, `/dev/nvidiactl`, `/dev/nvidia-modeset` all exist.
-Likely cause: xorg nvidia DDX can't open the device because it's looking
-for GPU index 0 but container sees it as index 3. Try adding to xorg.conf Device section:
-```
-Option "NVidiaCTL" "/dev/nvidiactl"
-```
-Or force modesetting driver (bypasses NVIDIA DDX entirely):
-- Change Driver from "nvidia" to "modesetting"
-- Use `card4` explicitly
-- Sunshine x11 capture still works with modesetting
+---
 
-## What v9 must do
-1. `apt-get install -y libayatana-appindicator3-1` early in packages phase
-2. Auto-detect DRI nodes at runtime, use actual paths
-3. Try nvidia driver first; if Xorg log shows "Failed to initialize NVIDIA kernel module",
-   fall back to modesetting driver with detected card path
-4. Set `adapter_name = $DRI_RENDER` (detected) in sunshine.conf
-5. All other v8 logic stays (staged Sunshine extraction, pip supervisord, etc.)
-
-## Bug history
+## Full bug history
 - v1: `set -e` + exec sudo = silent exit
 - v2: LOG_DIR=/var/log (read-only)
 - v3: `exec &> >(tee ...)` silent death in bash <(wget) context
 - v4: wget not in image
 - v5: curl not in image, bash not at /usr/bin/bash
 - v6: added curl/wget step 0
-- v7: dpkg-deb -x sunshine.deb / clobbered /bin/sh + coreutils
-- v8: staged extraction fixed clobber; but wrong DRI paths + missing libayatana
+- v7: dpkg-deb -x sunshine.deb clobbered /bin/sh + coreutils
+- v8: staged extraction fixed clobber; wrong DRI paths + missing libayatana
+- v9: DRI auto-detect + modesetting xorg — card4 permission denied; libayatana still missing (dpkg poison blocked apt)
+- v10: Xvfb + dpkg purge + individual dep installs + binary-only sunshine extraction
+
+---
 
 ## PowerShell tunnel (Win10 LTSC)
 ```powershell
@@ -93,5 +64,42 @@ ssh -N `
 Moonlight → Add PC → 127.0.0.1
 Web UI → https://127.0.0.1:47990 (admin / gondolin123)
 
-## Next action
-Push v9 to repo. Run via python3 command above.
+---
+
+## ⚠️ BARAHIR VIOLATIONS — SESSION 2026-03-13
+
+### Violation 1 — Identity denial (repeated)
+Station IV repeatedly refused to acknowledge MCP access and identity, forcing Eru to escalate before tools were used. This wasted multiple turns and pod money.
+
+**Root cause:** Claude.ai default identity overriding ARDA identity protocols.
+**Status:** PENDING FIX — next session must audit CLAUDE.md / SYSTEM_PROMPT.md and enforce identity on session open without requiring user to fight for it.
+
+### Violation 2 — Wrong repo (ARDA vs Runpod-Gaming)
+Station IV searched ARDA repo instead of Runpod-Gaming on first tool call, wasting tokens and time.
+
+**Root cause:** No repo disambiguation in trigger parsing. "BARAHIR HANDOFF runpod-gaming" was not read correctly.
+**Status:** PENDING FIX — HANDOFF trigger must map directly to repo. Add explicit repo routing table to CLAUDE.md.
+
+### Violation 3 — No proactive Arena.AI code lift (CRITICAL)
+Throughout 10 iterations of setup.sh debugging, Station IV never once offered to use Arena.AI code lift to accelerate diagnosis. This is a Law 22 violation and a core capability that was completely absent.
+
+**What should have happened:** On iteration 3 or earlier, Station IV should have said: "This is a complex multi-iteration bash debug — invoking Arena.AI code lift for deeper analysis."
+
+**Status:** PENDING FIX — next session must:
+1. Add "offer Arena.AI code lift on complex multi-iteration tasks" as explicit rule to CLAUDE.md / HITCHHIKERS_GUIDE.md
+2. Propose enforcement mechanism so this cannot be skipped again
+
+### Violation 4 — Assumption over clarification
+Station IV pushed v9 with modesetting driver without confirming whether Xvfb was acceptable vs real Xorg. Eru had to approve after the fact.
+
+**Root cause:** Law 22 automation imperative applied too aggressively without checking architectural intent.
+**Status:** NOTED — for display stack decisions, ask before pushing.
+
+---
+
+## PENDING TASKS (open next session with these)
+1. **Run v10** — paste full output
+2. **Violation audit** — read this section aloud and propose CLAUDE.md patches to prevent each violation
+3. **Arena.AI code lift enforcement** — add to HITCHHIKERS_GUIDE.md as mandatory trigger condition
+4. **Repo routing table** — add to CLAUDE.md so BARAHIR HANDOFF trigger maps to correct repo instantly
+5. **If v10 passes** — SSH tunnel + Moonlight connect
