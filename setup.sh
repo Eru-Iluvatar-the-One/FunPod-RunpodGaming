@@ -3,11 +3,14 @@
 #  RunPod Gaming Rig v11
 #  NVIDIA L4 | Ubuntu 22.04 | Sunshine → Moonlight | 4K@144Hz
 #
-#  v11 fixes over v10:
+#  v11 fixes:
 #    - Purge ALL stale supervisor conf.d files before writing new ones
 #    - Remove stale X lock files before Xvfb launch
 #    - Fix verify chk() arithmetic bug: ((0)) returns exit 1 in bash
 #    - Kill stale Xorg/X processes from prior runs
+#    - Add libva2/libva-drm2 (was missing entirely — sunshine needs libva.so.2)
+#    - Remove 2>/dev/null from critical dep installs to see actual errors
+#    - Hard-verify critical .so files exist after install
 ###############################################################################
 
 mkdir -p /workspace/gaming-logs
@@ -42,7 +45,6 @@ hdr()  { printf "\n${B}=== %s ===${N}\n" "$*"; }
 ###############################################################################
 hdr "0 — BOOTSTRAP + CLEANUP"
 ###############################################################################
-# Kill ALL stale processes from prior runs
 pkill -x supervisord 2>/dev/null || true
 pkill -f Xvfb        2>/dev/null || true
 pkill -f Xorg        2>/dev/null || true
@@ -87,8 +89,9 @@ hdr "3 — PACKAGES"
 ###############################################################################
 export DEBIAN_FRONTEND=noninteractive
 add-apt-repository -y universe 2>/dev/null || true
-apt-get update -qq 2>/dev/null || warn "apt update failed"
+apt-get update -qq || warn "apt update had errors"
 
+# Core X + tools
 apt-get install -y --no-install-recommends \
     xvfb x11-xserver-utils x11-utils xterm openbox dbus-x11 \
     xdotool xauth xkb-data 2>/dev/null || warn "some X pkgs failed"
@@ -99,12 +102,27 @@ apt-get install -y --no-install-recommends \
 apt-get install -y --no-install-recommends \
     rsync jq mesa-utils 2>/dev/null || warn "util pkgs failed"
 
+# ── CRITICAL sunshine deps — do NOT silence stderr ──
+# These are the ones that actually broke sunshine in v10
+CRITICAL_DEPS=(
+    libayatana-appindicator3-1
+    libva2
+    libva-drm2
+)
+for pkg in "${CRITICAL_DEPS[@]}"; do
+    log "Installing CRITICAL dep: $pkg"
+    if ! apt-get install -y --no-install-recommends "$pkg"; then
+        err "CRITICAL dep $pkg FAILED — sunshine will not start without this"
+    fi
+done
+
+# Non-critical sunshine deps — ok to fail
 for pkg in \
-    libayatana-appindicator3-1 \
     libnotify4 \
     libminiupnpc17 \
     libevdev2 \
     libnuma1 \
+    libvdpau1 \
     libboost-locale1.74.0 \
     libboost-thread1.74.0 \
     libboost-filesystem1.74.0 \
@@ -114,6 +132,24 @@ for pkg in \
         || warn "optional dep $pkg not available — skipping"
 done
 ldconfig 2>/dev/null || true
+
+# ── HARD VERIFY critical .so files actually exist ──
+CRITICAL_SO_OK=true
+for soname in libayatana-appindicator3.so.1 libva.so.2; do
+    SO_PATH=$(find /usr/lib /usr/lib64 /usr/local/lib -name "$soname" 2>/dev/null | head -1 || true)
+    if [ -n "$SO_PATH" ]; then
+        log "FOUND: $soname → $SO_PATH"
+    else
+        err "MISSING: $soname — searching all paths..."
+        find / -name "$soname" 2>/dev/null | head -5 || true
+        CRITICAL_SO_OK=false
+    fi
+done
+if [ "$CRITICAL_SO_OK" = false ]; then
+    err "One or more critical .so files missing. Sunshine WILL crash."
+    err "Check apt errors above. Continuing anyway to show full state..."
+fi
+
 log "packages done"
 
 # supervisord via pip
@@ -188,10 +224,11 @@ SUN_BIN=$(command -v sunshine 2>/dev/null \
 [ -z "$SUN_BIN" ] && { err "sunshine binary not found"; exit 1; }
 chmod +x "$SUN_BIN"
 
-# Check for missing shared libs
+# Hard ldd check — show ALL missing libs
+log "Checking sunshine shared libs..."
 MISSING_LIBS=$(ldd "$SUN_BIN" 2>/dev/null | grep "not found" || true)
 if [ -n "$MISSING_LIBS" ]; then
-    warn "Sunshine has missing libs:"
+    err "Sunshine has MISSING shared libs — it WILL crash:"
     echo "$MISSING_LIBS" | sed 's/^/  /'
 else
     log "All sunshine shared libs satisfied"
@@ -387,7 +424,15 @@ chk() {
 pgrep -x sshd &>/dev/null                           && chk ok "SSHD"                                    || chk fail "SSHD"
 xdpyinfo -display ":${DISPLAY_NUM}" &>/dev/null     && chk ok "Xvfb :${DISPLAY_NUM}"                    || chk fail "Xvfb :${DISPLAY_NUM} — check ${LOG_DIR}/xvfb.log"
 ldconfig -p 2>/dev/null | grep -q libnvidia-encode   && chk ok "NVENC in ldconfig"                       || chk fail "NVENC not in ldconfig"
-ldconfig -p 2>/dev/null | grep -q libayatana          && chk ok "libayatana present"                      || chk fail "libayatana MISSING — sunshine will crash"
+
+# Hard .so checks — verify the ACTUAL file exists, not just ldconfig cache
+[ -f "$(find /usr/lib -name 'libayatana-appindicator3.so.1' 2>/dev/null | head -1)" ] \
+    && chk ok "libayatana .so exists on disk" \
+    || chk fail "libayatana .so NOT FOUND on disk"
+[ -f "$(find /usr/lib -name 'libva.so.2' 2>/dev/null | head -1)" ] \
+    && chk ok "libva.so.2 exists on disk" \
+    || chk fail "libva.so.2 NOT FOUND on disk"
+
 pgrep -f sunshine &>/dev/null                        && chk ok "Sunshine running"                        || chk fail "Sunshine — check ${LOG_DIR}/sunshine.log"
 echo "  GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1)"
 echo ""
