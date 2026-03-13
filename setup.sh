@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# RunPod Gaming Rig v5
+# RunPod Gaming Rig v6
 # NVIDIA L4 | Ubuntu 22.04 | Sunshine -> Moonlight | 4K@144Hz
 
 set -e
@@ -15,7 +15,7 @@ warn() { echo "[WARN] $*";  echo "[WARN] $*"  >> "$LOG"; }
 die()  { echo "[FATAL] $*"; echo "[FATAL] $*" >> "$LOG"; exit 1; }
 
 echo "============================================"
-echo " RunPod Gaming Rig v5 -- $(date)"
+echo " RunPod Gaming Rig v6 -- $(date)"
 echo " Log: $LOG"
 echo "============================================"
 
@@ -33,6 +33,11 @@ B2_APP_KEY="${B2_APP_KEY:-}"
 FERAL_SAVES="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User Data/Save Games"
 FERAL_PACKS="/root/.local/share/feral-interactive/Total War THREE KINGDOMS/User Data/packs"
 PROTON_BASE="/root/.steam/steam/steamapps/compatdata/779340/pfx/drive_c/users/steamuser/Documents/My Games/Total War THREE KINGDOMS"
+
+# 0. BOOTSTRAP TOOLS
+step "0. BOOTSTRAP TOOLS"
+apt-get install -y curl wget 2>/dev/null || true
+log "curl/wget ensured"
 
 # 1. SSH
 step "1. SSH"
@@ -315,7 +320,7 @@ POD_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "?")
 
 echo ""
 echo "============================================"
-echo " DONE -- RunPod Gaming Rig v5"
+echo " DONE -- RunPod Gaming Rig v6"
 echo "============================================"
 echo " GPU      : $GPU_NAME (drv $DRV_MAJ)"
 echo " BusID    : $XORG_BUSID"
