@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  RunPod Gaming Rig v11
+#  RunPod Gaming Rig v12
 #  NVIDIA L4 | Ubuntu 22.04 | Sunshine → Moonlight | 4K@144Hz
 #
-#  v11 fixes:
-#    - Purge ALL stale supervisor conf.d files before writing new ones
-#    - Remove stale X lock files before Xvfb launch
-#    - Fix verify chk() arithmetic bug: ((0)) returns exit 1 in bash
-#    - Kill stale Xorg/X processes from prior runs
-#    - Add libva2/libva-drm2 (was missing entirely — sunshine needs libva.so.2)
-#    - Remove 2>/dev/null from critical dep installs to see actual errors
-#    - Hard-verify critical .so files exist after install
+#  v12:
+#    - Generate /workspace/connect.bat (one-click tunnel + Moonlight launch)
+#    - Dynamic public IP + SSH port detection
+#    - Clean footer: just download connect.bat
 ###############################################################################
 
 mkdir -p /workspace/gaming-logs
@@ -25,8 +21,8 @@ DISPLAY_NUM=99
 export DISPLAY=":${DISPLAY_NUM}"
 RES_W=3840; RES_H=2160; RES_HZ=144
 ROOT_PASS="gondolin123"
-RUNPOD_HOST="66.92.198.162"
-RUNPOD_SSH_PORT="11193"
+SUNSHINE_USER="admin"
+SUNSHINE_PASS="gondolin123"
 B2_BUCKET="Funfun"
 B2_ENDPOINT="${B2_ENDPOINT:-s3.us-east-005.backblazeb2.com}"
 B2_KEY_ID="${B2_KEY_ID:-}"
@@ -48,11 +44,10 @@ hdr "0 — BOOTSTRAP + CLEANUP"
 pkill -x supervisord 2>/dev/null || true
 pkill -f Xvfb        2>/dev/null || true
 pkill -f Xorg        2>/dev/null || true
-pkill -f sunshine     2>/dev/null || true
-pkill -f openbox      2>/dev/null || true
+pkill -f sunshine    2>/dev/null || true
+pkill -f openbox     2>/dev/null || true
 sleep 2
 
-# Remove stale X lock files
 rm -f /tmp/.X${DISPLAY_NUM}-lock 2>/dev/null || true
 rm -f /tmp/.X11-unix/X${DISPLAY_NUM} 2>/dev/null || true
 
@@ -91,7 +86,6 @@ export DEBIAN_FRONTEND=noninteractive
 add-apt-repository -y universe 2>/dev/null || true
 apt-get update -qq || warn "apt update had errors"
 
-# Core X + tools
 apt-get install -y --no-install-recommends \
     xvfb x11-xserver-utils x11-utils xterm openbox dbus-x11 \
     xdotool xauth xkb-data 2>/dev/null || warn "some X pkgs failed"
@@ -102,8 +96,7 @@ apt-get install -y --no-install-recommends \
 apt-get install -y --no-install-recommends \
     rsync jq mesa-utils 2>/dev/null || warn "util pkgs failed"
 
-# ── CRITICAL sunshine deps — do NOT silence stderr ──
-# These are the ones that actually broke sunshine in v10
+# CRITICAL sunshine deps
 CRITICAL_DEPS=(
     libayatana-appindicator3-1
     libva2
@@ -116,7 +109,6 @@ for pkg in "${CRITICAL_DEPS[@]}"; do
     fi
 done
 
-# Non-critical sunshine deps — ok to fail
 for pkg in \
     libnotify4 \
     libminiupnpc17 \
@@ -133,26 +125,20 @@ for pkg in \
 done
 ldconfig 2>/dev/null || true
 
-# ── HARD VERIFY critical .so files actually exist ──
 CRITICAL_SO_OK=true
 for soname in libayatana-appindicator3.so.1 libva.so.2; do
     SO_PATH=$(find /usr/lib /usr/lib64 /usr/local/lib -name "$soname" 2>/dev/null | head -1 || true)
     if [ -n "$SO_PATH" ]; then
         log "FOUND: $soname → $SO_PATH"
     else
-        err "MISSING: $soname — searching all paths..."
-        find / -name "$soname" 2>/dev/null | head -5 || true
+        err "MISSING: $soname"
         CRITICAL_SO_OK=false
     fi
 done
-if [ "$CRITICAL_SO_OK" = false ]; then
-    err "One or more critical .so files missing. Sunshine WILL crash."
-    err "Check apt errors above. Continuing anyway to show full state..."
-fi
+[ "$CRITICAL_SO_OK" = false ] && err "Critical .so missing — sunshine WILL crash"
 
 log "packages done"
 
-# supervisord via pip
 pip3 install --quiet supervisor 2>/dev/null || true
 SUPD=$(command -v supervisord 2>/dev/null \
     || find /usr/local/bin /root/.local/bin /usr/bin -name supervisord 2>/dev/null | head -1 || true)
@@ -196,16 +182,15 @@ CUDA_REAL=$(find "$LINK_DIR" /usr/local/nvidia/lib64 /usr/lib64 \
 [ -n "$CUDA_REAL" ] && { ln -sf "$CUDA_REAL" "${LINK_DIR}/libcuda.so.1" 2>/dev/null || true; ldconfig; log "libcuda.so.1 linked"; }
 
 ###############################################################################
-hdr "5 — SUNSHINE (binary extraction only — no dpkg -i)"
+hdr "5 — SUNSHINE"
 ###############################################################################
 SUN_BIN=$(command -v sunshine 2>/dev/null \
     || find /usr/bin /usr/local/bin -name sunshine -type f 2>/dev/null | head -1 || true)
 
 if [ -z "$SUN_BIN" ]; then
-    log "Downloading Sunshine deb for binary extraction..."
+    log "Downloading Sunshine deb..."
     SUN_URL="https://github.com/LizardByte/Sunshine/releases/download/v0.23.1/sunshine-ubuntu-22.04-amd64.deb"
     curl -fsSL "$SUN_URL" -o /tmp/sunshine.deb || { err "Sunshine download failed"; exit 1; }
-
     SUN_STAGE=$(mktemp -d /tmp/sun-stage-XXXXXX)
     dpkg-deb -x /tmp/sunshine.deb "$SUN_STAGE"
     [ -f "${SUN_STAGE}/usr/bin/sunshine" ]   && cp -f "${SUN_STAGE}/usr/bin/sunshine"   /usr/bin/sunshine
@@ -224,19 +209,18 @@ SUN_BIN=$(command -v sunshine 2>/dev/null \
 [ -z "$SUN_BIN" ] && { err "sunshine binary not found"; exit 1; }
 chmod +x "$SUN_BIN"
 
-# Hard ldd check — show ALL missing libs
-log "Checking sunshine shared libs..."
 MISSING_LIBS=$(ldd "$SUN_BIN" 2>/dev/null | grep "not found" || true)
 if [ -n "$MISSING_LIBS" ]; then
-    err "Sunshine has MISSING shared libs — it WILL crash:"
+    err "Sunshine missing shared libs:"
     echo "$MISSING_LIBS" | sed 's/^/  /'
 else
     log "All sunshine shared libs satisfied"
 fi
 
 mkdir -p /root/.config/sunshine
+echo '{}' > /root/.config/sunshine/sunshine_state.json
+
 cat > /root/.config/sunshine/sunshine.conf << SUNEOF
-bind_address          = 127.0.0.1
 port                  = 47989
 upnp                  = off
 origin_web_ui_allowed = pc
@@ -247,14 +231,12 @@ adapter_name          = ${DRI_RENDER}
 output_name           = 0
 resolutions           = [3840x2160, 2560x1440, 1920x1080]
 fps                   = [144, 60, 30]
-nv_preset             = p4
-nv_tune               = ll
-nv_rc                 = cbr
 min_log_level         = info
 SUNEOF
 
-"$SUN_BIN" --creds admin gondolin123 2>/dev/null || warn "sunshine --creds failed — set via web UI"
-log "Sunshine configured (adapter_name=${DRI_RENDER})"
+"$SUN_BIN" --creds "${SUNSHINE_USER}" "${SUNSHINE_PASS}" 2>/dev/null \
+    && log "Sunshine creds set: ${SUNSHINE_USER} / ${SUNSHINE_PASS}" \
+    || warn "sunshine --creds failed — use web UI at https://127.0.0.1:47990"
 
 ###############################################################################
 hdr "6 — GAME ASSETS"
@@ -320,10 +302,8 @@ hdr "9 — SUPERVISOR"
 mkdir -p /run/user/0; chmod 700 /run/user/0
 
 XVFB_BIN=$(command -v Xvfb 2>/dev/null || find /usr/bin -name Xvfb 2>/dev/null | head -1 || true)
-[ -z "$XVFB_BIN" ] && { err "Xvfb not found — apt install xvfb likely failed"; exit 1; }
-log "Xvfb: $XVFB_BIN"
+[ -z "$XVFB_BIN" ] && { err "Xvfb not found"; exit 1; }
 
-# *** CRITICAL: purge ALL old supervisor configs before writing new ones ***
 rm -f /etc/supervisor/conf.d/*.conf 2>/dev/null || true
 mkdir -p /etc/supervisor/conf.d
 
@@ -413,56 +393,106 @@ hdr "11 — VERIFY"
 PASS=0; FAIL=0
 chk() {
     if [ "$1" = ok ]; then
-        printf "  [OK] %s\n" "$2"
-        PASS=$((PASS+1))
+        printf "  [OK] %s\n" "$2"; PASS=$((PASS+1))
     else
-        printf "  [!!] %s\n" "$2"
-        FAIL=$((FAIL+1))
+        printf "  [!!] %s\n" "$2"; FAIL=$((FAIL+1))
     fi
 }
 
-pgrep -x sshd &>/dev/null                           && chk ok "SSHD"                                    || chk fail "SSHD"
-xdpyinfo -display ":${DISPLAY_NUM}" &>/dev/null     && chk ok "Xvfb :${DISPLAY_NUM}"                    || chk fail "Xvfb :${DISPLAY_NUM} — check ${LOG_DIR}/xvfb.log"
-ldconfig -p 2>/dev/null | grep -q libnvidia-encode   && chk ok "NVENC in ldconfig"                       || chk fail "NVENC not in ldconfig"
-
-# Hard .so checks — verify the ACTUAL file exists, not just ldconfig cache
+pgrep -x sshd &>/dev/null                         && chk ok "SSHD"                  || chk fail "SSHD"
+xdpyinfo -display ":${DISPLAY_NUM}" &>/dev/null   && chk ok "Xvfb :${DISPLAY_NUM}"  || chk fail "Xvfb — check ${LOG_DIR}/xvfb.log"
+ldconfig -p 2>/dev/null | grep -q libnvidia-encode && chk ok "NVENC in ldconfig"     || chk fail "NVENC not in ldconfig"
 [ -f "$(find /usr/lib -name 'libayatana-appindicator3.so.1' 2>/dev/null | head -1)" ] \
-    && chk ok "libayatana .so exists on disk" \
-    || chk fail "libayatana .so NOT FOUND on disk"
+    && chk ok "libayatana-appindicator3.so.1" || chk fail "libayatana-appindicator3.so.1 MISSING"
 [ -f "$(find /usr/lib -name 'libva.so.2' 2>/dev/null | head -1)" ] \
-    && chk ok "libva.so.2 exists on disk" \
-    || chk fail "libva.so.2 NOT FOUND on disk"
+    && chk ok "libva.so.2"                    || chk fail "libva.so.2 MISSING"
+pgrep -f sunshine &>/dev/null                      && chk ok "Sunshine running"      || chk fail "Sunshine — check ${LOG_DIR}/sunshine.log"
 
-pgrep -f sunshine &>/dev/null                        && chk ok "Sunshine running"                        || chk fail "Sunshine — check ${LOG_DIR}/sunshine.log"
 echo "  GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1)"
-echo ""
 echo "  Result: ${PASS} passed / ${FAIL} failed"
+
+###############################################################################
+hdr "12 — GENERATE connect.bat"
+###############################################################################
+PUBIP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 api.ipify.org 2>/dev/null || echo "UNKNOWN")
+# RunPod exposes SSH port via RUNPOD_TCP_PORT_22 env var
+SSH_PORT="${RUNPOD_TCP_PORT_22:-22}"
+
+log "Public IP: ${PUBIP}  SSH port: ${SSH_PORT}"
+
+cat > /workspace/connect.bat << ENDBAT
+@echo off
+title RunPod Gaming — Connecting...
+echo.
+echo   ========================================
+echo    RunPod Gaming Rig — One-Click Connect
+echo   ========================================
+echo.
+
+:: Kill any old tunnel
+taskkill /F /IM ssh.exe >nul 2>&1
+
+:: Start SSH tunnel
+echo   [1/3] Opening tunnel to ${PUBIP}:${SSH_PORT}...
+start /B ssh -N ^
+  -L 47984:localhost:47984 ^
+  -L 47989:localhost:47989 ^
+  -L 47990:localhost:47990 ^
+  -L 47998:localhost:47998 ^
+  -L 47999:localhost:47999 ^
+  -L 48000:localhost:48000 ^
+  -L 48010:localhost:48010 ^
+  root@${PUBIP} -p ${SSH_PORT} ^
+  -o StrictHostKeyChecking=no ^
+  -o UserKnownHostsFile=NUL
+
+echo   [2/3] Waiting for tunnel...
+timeout /t 4 /nobreak >nul
+
+:: Launch Moonlight
+echo   [3/3] Launching Moonlight...
+start "" "C:\Program Files\Moonlight Game Streaming\Moonlight.exe"
+
+echo.
+echo   ==========================================
+echo    Tunnel OPEN. Moonlight launching.
+echo.
+echo    FIRST TIME ONLY:
+echo      1. Moonlight shows a 4-digit PIN
+echo      2. Enter it at https://127.0.0.1:47990
+echo         Login: ${SUNSHINE_USER} / ${SUNSHINE_PASS}
+echo      3. After pairing it just works forever
+echo   ==========================================
+echo.
+
+timeout /t 3 /nobreak >nul
+start https://127.0.0.1:47990
+
+echo   Press any key to DISCONNECT.
+pause >nul
+taskkill /F /IM ssh.exe >nul 2>&1
+ENDBAT
+
+chmod 644 /workspace/connect.bat
+log "connect.bat written → /workspace/connect.bat"
 
 ###############################################################################
 echo ""
 echo "==========================================="
-echo " RunPod Gaming Rig v11 — ${SECONDS}s"
+echo " RunPod Gaming Rig v12 — ${SECONDS}s"
 echo "==========================================="
-echo " SSH:  ssh root@${RUNPOD_HOST} -p ${RUNPOD_SSH_PORT}"
-echo " Pass: ${ROOT_PASS}"
 echo ""
-echo " PowerShell tunnel:"
-echo "   ssh -N \\"
-echo "     -L 47984:localhost:47984 \\"
-echo "     -L 47989:localhost:47989 \\"
-echo "     -L 47990:localhost:47990 \\"
-echo "     -L 48010:localhost:48010 \\"
-echo "     root@${RUNPOD_HOST} -p ${RUNPOD_SSH_PORT} -o StrictHostKeyChecking=no"
+echo " Download connect.bat and double-click it:"
 echo ""
-echo " Moonlight → Add PC → 127.0.0.1"
-echo " Web UI    → https://127.0.0.1:47990  (admin / gondolin123)"
+echo "   scp -P ${SSH_PORT} root@${PUBIP}:/workspace/connect.bat ."
 echo ""
-echo " supervisorctl -c /etc/supervisor/supervisord.conf status"
-echo " tail -f ${LOG_DIR}/sunshine.log"
-echo " tail -f ${LOG_DIR}/xvfb.log"
+echo " Or grab it from the RunPod file browser:"
+echo "   /workspace/connect.bat"
+echo ""
+echo " That's it. Double-click → tunnel opens → Moonlight launches."
 echo "==========================================="
 
 if [ -n "${JUPYTER_TOKEN:-}" ] || [ -n "${JUPYTER_RUNTIME_DIR:-}" ] || [ -n "${JPY_PARENT_PID:-}" ]; then
-    log "Jupyter detected — terminal staying open (services daemonized)"
+    log "Jupyter detected — staying open"
     exec sleep infinity
 fi
