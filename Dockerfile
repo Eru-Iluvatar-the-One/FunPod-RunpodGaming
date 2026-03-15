@@ -29,9 +29,9 @@ RUN dos2unix /neko-init.sh && chmod +x /neko-init.sh
 
 EXPOSE 8080
 
-# Passwords set via pod env vars — do not bake secrets into image
-# GPU pipeline: set NEKO_GPU_PIPELINE=0 to use CPU fallback
 ENV NEKO_DESKTOP_SCREEN="1920x1080@30" \
+    NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="admin" \
+    NEKO_MEMBER_MULTIUSER_USER_PASSWORD="neko" \
     NEKO_WEBRTC_TCPMUX=8080 \
     NEKO_WEBRTC_ICELITE=true \
     NEKO_CAPTURE_VIDEO_CODEC="h264" \
