@@ -3,7 +3,7 @@ $dir = "C:\FunFunPod"
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 
 Write-Host "Downloading FunFunConnect.ps1..." -ForegroundColor Cyan
-$url = "https://raw.githubusercontent.com/Eru-Iluvatar-the-One/Runpod-Gaming/main/FunFunConnect.ps1"
+$url = "https://raw.githubusercontent.com/Eru-Iluvatar-the-One/FunPod-RunpodGaming/main/FunFunConnect.ps1"
 Invoke-WebRequest $url -OutFile "$dir\FunFunConnect.ps1" -UseBasicParsing
 
 # Shortcut
@@ -34,3 +34,4 @@ if ($pin) {
 
 Write-Host "`nDone. Click FunFunPod on taskbar to play." -ForegroundColor Green
 Read-Host
+
