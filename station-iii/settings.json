@@ -1,0 +1,10 @@
+{
+  "workbench.colorTheme": "Default Dark Modern",
+  "editor.fontSize": 14,
+  "editor.tabSize": 4,
+  "editor.wordWrap": "on",
+  "terminal.integrated.fontSize": 13,
+  "files.autoSave": "afterDelay",
+  "git.autofetch": true,
+  "telemetry.telemetryLevel": "off"
+}

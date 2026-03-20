@@ -1,0 +1,7 @@
+{
+  "templateName": "Station III - Cloud Autocoder",
+  "containerDiskSize": 20,
+  "volumeMountPath": "/workspace",
+  "minVolumeSize": 30,
+  "exposedHttpPorts": "8080"
+}
