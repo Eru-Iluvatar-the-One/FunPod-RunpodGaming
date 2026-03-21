@@ -1,0 +1,3 @@
+# Temporary audit copies - everything ignored except this file
+*
+!.gitignore
