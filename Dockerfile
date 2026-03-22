@@ -24,9 +24,9 @@ RUN apt-get update && \
 COPY neko-init.sh /neko-init.sh
 RUN dos2unix /neko-init.sh && chmod +x /neko-init.sh
 
-# RunPod torch template calls /docker-entrypoint.sh — provide it
-# It runs our init then hands off to neko's own supervisord entrypoint
-RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /docker-entrypoint-neko.sh "$@"\n' > /docker-entrypoint.sh && \
+# neko base image: supervisord.conf lives at /etc/neko/supervisord.conf
+# RunPod torch template calls /docker-entrypoint.sh — we provide it
+RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /usr/bin/supervisord -c /etc/neko/supervisord.conf\n' > /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
