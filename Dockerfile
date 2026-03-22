@@ -2,10 +2,9 @@ FROM ghcr.io/m1k1o/neko/nvidia-base:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Allow Xorg to run as root in container
 RUN mkdir -p /etc/X11 && printf "allowed_users=anybody\nneeds_root_rights=yes\n" > /etc/X11/Xwrapper.config
 
-# Install Steam deps + utilities — do NOT install gstreamer packages (would overwrite CUDA plugins from base)
+# Steam deps + utilities — do NOT install gstreamer packages (overwrites CUDA plugins from base)
 RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y \
     dbus-x11 \
     pulseaudio pulseaudio-utils \
@@ -32,11 +31,13 @@ RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /usr/bin/supervisord -c /et
     chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
+EXPOSE 8081
 
-# MINIMAL config — let neko defaults handle display + codec + WebRTC
-# DO NOT set NEKO_CAPTURE_VIDEO_PIPELINE or NEKO_WEBRTC_TCPMUX until base boots clean
+# TCPMUX required — RunPod blocks all inbound UDP
+# NO custom NEKO_CAPTURE_VIDEO_PIPELINE — let neko auto-detect encoder
 ENV NEKO_DESKTOP_SCREEN="1920x1080@30" \
     NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="admin" \
     NEKO_MEMBER_MULTIUSER_USER_PASSWORD="neko" \
+    NEKO_WEBRTC_TCPMUX=8081 \
     NEKO_WEBRTC_ICELITE=true \
     NEKO_CAPTURE_VIDEO_CODEC="h264"
