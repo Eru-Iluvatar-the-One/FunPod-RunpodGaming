@@ -1,9 +1,1 @@
 runpod-gaming-rig/
-
-*.lnk
-Thumbs.db
-.DS_Store
-__pycache__/
-*.py[cod]
-*.log
-
