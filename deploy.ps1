@@ -21,8 +21,9 @@ if (Test-Path $cfgPath) {
 }
 Write-Host "[1/7] Docker config patched" -ForegroundColor Green
 
-# ── Docker login ─────────────────────────────────────────────
-$DOCKER_PAT | & $DOCKER login --username eruilu --password-stdin 2>&1 | Write-Host
+# ── Docker login (cmd /c avoids PS pipe+spaces-in-path bug) ──
+$loginResult = cmd /c "echo $DOCKER_PAT | `"$DOCKER`" login --username eruilu --password-stdin 2>&1"
+$loginResult | Write-Host
 if ($LASTEXITCODE -ne 0) { throw "Docker login failed" }
 Write-Host "[2/7] Docker login OK" -ForegroundColor Green
 
@@ -47,7 +48,7 @@ Write-Host "[5/7] Push OK" -ForegroundColor Green
 try {
     $oldPod = Get-ItemPropertyValue "HKCU:\Environment" -Name "FunFunPodID" -ErrorAction SilentlyContinue
     if ($oldPod) {
-        $stopBody = '{"query":"mutation{podStop(input:{podId:\"' + $oldPod + '\"}){id}}"}'
+        $stopBody = '{"query":"mutation{podStop(input:{podId:\"' + $oldPod + '\"}){id}}"}' 
         Invoke-RestMethod -Uri "https://api.runpod.io/graphql?api_key=$RUNPOD_KEY" -Method POST -ContentType "application/json" -Body $stopBody | Out-Null
         Write-Host "[5.5] Stopped old pod $oldPod" -ForegroundColor Yellow
     }
@@ -55,7 +56,7 @@ try {
 
 # ── Deploy new pod ───────────────────────────────────────────
 Write-Host "[6/7] Deploying new A40 pod..." -ForegroundColor Cyan
-$deployBody = '{"query":"mutation { podFindAndDeployOnDemand(input: { name: \"FunFunPod\", imageName: \"eruilu/funfunpod:latest\", gpuTypeId: \"NVIDIA A40\", cloudType: SECURE, gpuCount: 1, volumeInGb: 175, containerDiskInGb: 75, volumeMountPath: \"/workspace\", ports: \"8080/http,8081/tcp,22/tcp\", startSsh: true, env: [] }) { id desiredStatus } }"}'
+$deployBody = '{"query":"mutation { podFindAndDeployOnDemand(input: { name: \"FunFunPod\", imageName: \"eruilu/funfunpod:latest\", gpuTypeId: \"NVIDIA A40\", cloudType: SECURE, gpuCount: 1, volumeInGb: 175, containerDiskInGb: 75, volumeMountPath: \"/workspace\", ports: \"8080/http,8081/tcp,22/tcp\", startSsh: true, env: [] }) { id desiredStatus } }"}' 
 $result = Invoke-RestMethod -Uri "https://api.runpod.io/graphql?api_key=$RUNPOD_KEY" -Method POST -ContentType "application/json" -Body $deployBody
 if ($result.errors) {
     $result.errors | ForEach-Object { Write-Host "  ERROR: $($_.message)" -ForegroundColor Red }
@@ -78,7 +79,7 @@ for ($i = 1; $i -le 60; $i++) {
     } catch {
         $msg = $_.Exception.Message
         if ($msg -match "(\d{3})") { $code = $Matches[1] } else { $code = "..." }
-        Write-Host "  wait $i ($code)" -NoNewline:$false
+        Write-Host "  wait $i ($code)"
     }
     Start-Sleep 10
 }
