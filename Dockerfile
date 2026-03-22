@@ -2,6 +2,9 @@ FROM ghcr.io/m1k1o/neko/nvidia-base:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Fix Xorg in container — must run before anything else
+RUN mkdir -p /etc/X11 && printf "allowed_users=anybody\nneeds_root_rights=yes\n" > /etc/X11/Xwrapper.config
+
 RUN dpkg --add-architecture i386 && apt-get update && apt-get install -y \
     xfce4 xfce4-terminal dbus-x11 \
     pulseaudio pulseaudio-utils \
@@ -24,8 +27,6 @@ RUN apt-get update && \
 COPY neko-init.sh /neko-init.sh
 RUN dos2unix /neko-init.sh && chmod +x /neko-init.sh
 
-# neko base image: supervisord.conf lives at /etc/neko/supervisord.conf
-# RunPod torch template calls /docker-entrypoint.sh — we provide it
 RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /usr/bin/supervisord -c /etc/neko/supervisord.conf\n' > /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
