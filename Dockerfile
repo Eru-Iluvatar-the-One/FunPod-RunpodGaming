@@ -27,17 +27,16 @@ RUN apt-get update && \
 COPY neko-init.sh /neko-init.sh
 RUN dos2unix /neko-init.sh && chmod +x /neko-init.sh
 
-RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /usr/bin/supervisord -c /etc/neko/supervisord.conf\n' > /docker-entrypoint.sh && \
-    chmod +x /docker-entrypoint.sh
+# DO NOT override ENTRYPOINT — base image uses /opt/nvidia/nvidia_entrypoint.sh
+# which initializes GPU. Override CMD only to run our init before supervisord.
+# Base CMD: /usr/bin/supervisord -c /etc/neko/supervisord.conf
 
 EXPOSE 8080
 EXPOSE 8081
 
-# TCPMUX required — RunPod blocks all inbound UDP
-# NO custom NEKO_CAPTURE_VIDEO_PIPELINE — let neko auto-detect encoder
-ENV NEKO_DESKTOP_SCREEN="1920x1080@30" \
-    NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="admin" \
-    NEKO_MEMBER_MULTIUSER_USER_PASSWORD="neko" \
-    NEKO_WEBRTC_TCPMUX=8081 \
-    NEKO_WEBRTC_ICELITE=true \
-    NEKO_CAPTURE_VIDEO_CODEC="h264"
+# Minimal env — only passwords. TCPMUX added via CMD flag, not env.
+# Base image already sets: NEKO_SERVER_BIND=:8080, DISPLAY=:99.0, USER=neko
+ENV NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="admin" \
+    NEKO_MEMBER_MULTIUSER_USER_PASSWORD="neko"
+
+CMD ["/bin/bash", "-c", "/neko-init.sh; exec /usr/bin/supervisord -c /etc/neko/supervisord.conf"]
