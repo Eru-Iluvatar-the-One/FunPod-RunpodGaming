@@ -24,13 +24,13 @@ RUN apt-get update && \
 COPY neko-init.sh /neko-init.sh
 RUN dos2unix /neko-init.sh && chmod +x /neko-init.sh
 
-RUN echo '#!/bin/bash' > /start.sh && \
-    echo 'set -e' >> /start.sh && \
-    echo '/neko-init.sh' >> /start.sh && \
-    echo 'exec "$(find /usr/bin /usr/local/bin -name "supervisord" 2>/dev/null | head -1)" -c "$(find /etc -name "supervisord.conf" 2>/dev/null | head -1)"' >> /start.sh && \
-    chmod +x /start.sh
+# RunPod torch template calls /docker-entrypoint.sh — provide it
+# It runs our init then hands off to neko's own supervisord entrypoint
+RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /docker-entrypoint-neko.sh "$@"\n' > /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
+EXPOSE 8081
 
 ENV NEKO_DESKTOP_SCREEN="1920x1080@30" \
     NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="admin" \
@@ -39,5 +39,3 @@ ENV NEKO_DESKTOP_SCREEN="1920x1080@30" \
     NEKO_WEBRTC_ICELITE=true \
     NEKO_CAPTURE_VIDEO_CODEC="h264" \
     NEKO_CAPTURE_VIDEO_PIPELINE="ximagesrc display-name={display} show-pointer=true use-damage=false ! video/x-raw,framerate=30/1 ! videoconvert ! queue ! video/x-raw,format=NV12 ! cudaupload ! cudaconvert ! video/x-raw(memory:CUDAMemory),format=NV12 ! nvh264enc name=encoder preset=2 gop-size=25 spatial-aq=true temporal-aq=true bitrate=6000 vbv-buffer-size=6000 rc-mode=6 ! h264parse config-interval=-1 ! video/x-h264,stream-format=byte-stream ! appsink name=appsink"
-
-ENTRYPOINT ["/start.sh"]
