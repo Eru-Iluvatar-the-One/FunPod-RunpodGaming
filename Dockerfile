@@ -32,12 +32,11 @@ RUN printf '#!/bin/bash\nset -e\n/neko-init.sh\nexec /usr/bin/supervisord -c /et
     chmod +x /docker-entrypoint.sh
 
 EXPOSE 8080
-EXPOSE 8081
 
+# MINIMAL config — let neko defaults handle display + codec + WebRTC
+# DO NOT set NEKO_CAPTURE_VIDEO_PIPELINE or NEKO_WEBRTC_TCPMUX until base boots clean
 ENV NEKO_DESKTOP_SCREEN="1920x1080@30" \
     NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="admin" \
     NEKO_MEMBER_MULTIUSER_USER_PASSWORD="neko" \
-    NEKO_WEBRTC_TCPMUX=8081 \
     NEKO_WEBRTC_ICELITE=true \
-    NEKO_CAPTURE_VIDEO_CODEC="h264" \
-    NEKO_CAPTURE_VIDEO_PIPELINE="ximagesrc display-name={display} show-pointer=true use-damage=false ! video/x-raw,framerate=30/1 ! cudaupload ! cudaconvert ! video/x-raw(memory:CUDAMemory),format=NV12 ! nvh264enc name=encoder preset=2 gop-size=25 spatial-aq=true temporal-aq=true bitrate=6000 vbv-buffer-size=6000 rc-mode=6 ! h264parse config-interval=-1 ! video/x-h264,stream-format=byte-stream ! appsink name=appsink"
+    NEKO_CAPTURE_VIDEO_CODEC="h264"
