@@ -1,4 +1,4 @@
-FROM ghcr.io/m1k1o/neko/nvidia-xfce:latest
+FROM ghcr.io/m1k1o/neko/nvidia-base:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
