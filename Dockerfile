@@ -23,9 +23,14 @@ RUN apt-get update && \
     rm -f /tmp/steam.deb && \
     rm -rf /var/lib/apt/lists/*
 
-# Replace Xorg with Xvfb in supervisord config
-RUN sed -i 's|command=.*Xorg.*|command=/usr/bin/Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset|g' \
-    /etc/neko/supervisord.conf || true
+# Patch supervisord: replace entire x-server command line with Xvfb
+# Print the block first for build-time verification, then patch
+RUN echo "=== x-server block before patch ===" && \
+    grep -A5 '\[program:x-server\]' /etc/neko/supervisord.conf && \
+    sed -i '/^\[program:x-server\]/,/^\[/{s|^command=.*|command=/usr/bin/Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset|}' \
+    /etc/neko/supervisord.conf && \
+    echo "=== x-server block after patch ===" && \
+    grep -A5 '\[program:x-server\]' /etc/neko/supervisord.conf
 
 COPY neko-init.sh /neko-init.sh
 RUN dos2unix /neko-init.sh && chmod +x /neko-init.sh
