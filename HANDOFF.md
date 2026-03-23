@@ -2,84 +2,80 @@
 
 **Trigger:** `BARAHIR HANDOFF runpod-gaming`
 
-## Current State (2026-03-22)
+---
 
-- **Image:** `eruilu/funfunpod:latest` on Docker Hub — **STALE, contains crash-causing custom NVENC pipeline**
-- **Dockerfile in repo:** FIXED (custom pipeline removed, TCPMUX=8081 retained)
-- **Docker Hub NOT rebuilt** — `docker build` fails locally with `docker-credential-desktop` PATH error
-- **Active pod:** `6sjdbb0dhktgdi` — 502ing because it pulled the stale image
-- **Pure base image test (`ghcr.io/m1k1o/neko/nvidia-base:latest`):** BOOTS AND SERVES HTTP 200. WebRTC "Reconnecting..." without TCPMUX (expected — RunPod blocks UDP).
-- **Root cause of all crashes:** `NEKO_CAPTURE_VIDEO_PIPELINE` env var with custom GStreamer pipeline referencing `cudaupload ! cudaconvert ! nvh264enc` — elements don't exist or mismatch in base image's GStreamer build → panic at `desktop/manager.go:57`
+## Current State (2026-03-23)
 
-## Blockers to Resolve
+- **Image:** `eruilu/funfunpod:latest` — **FRESHLY REBUILT AND PUSHED this session**
+- **Key fix this session:** X server was crashing (`Invalid argument for -config xorg.conf` → `unable to open display :99.0`). Fixed by replacing Xorg with Xvfb in supervisord via range-based sed patch.
+- **Active pod:** NONE — `lwa4x0fxj8d1ga` terminated. Image rebuilt. **Deploy fresh pod to test.**
+- **Windows registry:** `FunFunPodID` = `lwa4x0fxj8d1ga` (stale — update after next deploy)
 
-1. **Docker credential helper:** `docker-credential-desktop` not in PATH → build fails
-2. **Image rebuild + push** needed after credential fix
-3. **Fresh pod deploy** from rebuilt image (node cache = must be NEW pod, not restart)
-4. **Windows env var mismatch:** API key stored as `Funpod-RunpodGaming`, script expects `FunFunPod`
-5. **Local FunFunConnect.ps1** at `C:\FunFunPod\` is ancient Parsec version; repo version is correct Neko version
+## Dockerfile Fix Applied
 
-## What Works Confirmed
+Old broken sed (too greedy, didn't match):
+```
+sed -i 's|command=.*Xorg.*|...|g'
+```
 
-- Base neko image boots clean on RunPod A40 with default settings
-- HTTP proxy `https://<POD_ID>-8080.proxy.runpod.net` serves Neko login
-- TCPMUX=8081 is REQUIRED for WebRTC (RunPod blocks all inbound UDP)
-- Custom NVENC pipeline MUST be removed (let neko auto-detect)
+New working sed (range-based, targets only `[program:x-server]` block):
+```dockerfile
+RUN sed -i '/^\[program:x-server\]/,/^\[/{s|^command=.*|command=/usr/bin/Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset|}' \
+    /etc/neko/supervisord.conf
+```
+Build also prints before/after grep for verification.
 
-## Deploy Instructions
+## Next Action
 
-New pod settings:
-- **Image:** `eruilu/funfunpod:latest` (AFTER rebuild+push)
-- **GPU:** A40 1x
-- **Container disk:** 75GB
-- **Pod volume:** 175GB at `/workspace`
-- **Ports:** `8080/http`, `8081/tcp`
-- **No env var overrides needed** (all baked into Dockerfile)
-
-## Architecture
-
-- **Stack:** Neko (m1k1o/neko/nvidia-base) + Steam + Proton
-- **Transport:** WebRTC over TCP mux port 8081
-- **No UDP. No tunnels. No client software.**
+Deploy fresh pod via RunPod assistant:
+```
+Deploy FunFunPod. Image: eruilu/funfunpod:latest. GPU: RTX 4000 Ada. Container 50GB, Volume 100GB at /workspace. Ports: 8080/http, 8081/tcp, 22/tcp.
+```
+Then: hit `https://<POD_ID>-8080.proxy.runpod.net` — expect Neko login page.
 
 ## Windows Env Vars (Registry HKCU:\Environment)
 
 | Var | Purpose |
 |---|---|
-| `Funpod-RunpodGaming` | RunPod API key (NOTE: not `FunFunPod`) |
+| `Funpod-RunpodGaming` | RunPod API key |
 | `FunFunPodID` | Current pod ID |
 | `Docker-Funpod-Runpod-Gaming` | Docker Hub PAT |
 
-## Neko Credentials
+## Critical Tool Usage Rules for Next Session
 
+**TERMINAL MCP** — use `& "C:\Program Files\Git\bin\git.exe"` for git (not in PATH). Docker IS on PATH. `build-and-push.ps1` works directly via `Set-Location` + `& ".\build-and-push.ps1"`.
+
+**GITHUB MCP** — always `get_file_contents` before `create_or_update_file` to get SHA. Private repo code search returns zero — use `filesystem:search_files` or `filesystem:read_text_file` instead.
+
+**RUNPOD TERMINATION** — Claude terminates pods directly via GraphQL. API key = `Funpod-RunpodGaming` in registry. RunPod assistant deploys; Claude terminates.
+
+**CIC (Claude in Chrome)** — use `find` to get refs before clicking. Input box ref changes after navigation. Always `screenshot` after every action to confirm state. Use `tabs_context_mcp` once per session.
+
+**TOKEN CONSERVATION** — use `filesystem:read_text_file`, `github:get_file_contents`, `terminal:run_command` in parallel where possible. Do NOT take screenshots in loops — use `wait` x3 then one screenshot. Do NOT re-read files already in context.
+
+## Neko Credentials
 - Admin: `admin` / `admin`
 - User: `neko` / `neko`
 
-## What Failed Before (DO NOT RETRY)
-
-- Moonlight/Sunshine — UDP required, RunPod blocks all UDP
-- Chisel — Windows Defender flags as HackTool
-- Tailscale/boringtun — no TUN device in unprivileged containers
+## What Failed (DO NOT RETRY)
+- Moonlight/Sunshine — UDP blocked by RunPod at network level
+- Chisel — Windows Defender HackTool flag
+- Tailscale/boringtun — no TUN device
 - Parsec — no Linux hosting on consumer accounts
-- Vast.ai + Moonlight — open UDP but driver instability
-- Restarting existing pod with `:latest` tag — Docker caches old image
-- Custom NEKO_CAPTURE_VIDEO_PIPELINE — panic crash in DesktopManager
-- Setting env vars to empty string "" — Neko parses as invalid pipeline, also crashes
+- Custom `NEKO_CAPTURE_VIDEO_PIPELINE` — panic crash
+- Setting pipeline env var to `""` — also crashes
+- Restarting existing pod with `:latest` — node cache, pulls stale image
+- Xorg / xorg.conf in containers — no GPU modesetting, always fails
 
 ## BARAHIR Violations
 
+### V-008 — 2026-03-23: Tool Call Exhaustion / Inefficient Polling
+**Root cause:** Used repeated `wait`+`screenshot` loops instead of batching waits. Burned tool calls on polling instead of using `terminal:run_command` to curl-probe the endpoint. Ran out of tool calls before completing deploy.
+**Correct behavior:** Poll via `terminal:run_command` with `Invoke-WebRequest` in a loop — one tool call per probe. Reserve CIC screenshot calls for confirmation only.
+
 ### V-007 — 2026-03-22: 2-Hour Cascading Failure Loop
-**Severity:** Critical
-**Root cause:** Station IV failed to escalate to Arena.AI after iteration 2. Instead burned 5+ pod deployments, multiple SSH failures, credential issues, and Docker build failures across a 2-hour session. User's entire break wasted.
-**Specific failures:**
-1. Did not discover API key env var name mismatch (`Funpod-RunpodGaming` vs `FunFunPod`) until user intervened
-2. Deployed pod via GraphQL instead of delegating to RunPod assistant (user's established workflow)
-3. Set pipeline env var to empty string, causing DIFFERENT crash mode
-4. Failed to run `build-and-push.ps1` autonomously (Docker credential error unresolved)
-5. Could not capture SSH output via terminal MCP (known caveat, should have used Chrome or asked user)
-6. Exceeded BARAHIR 2-iteration escalation rule by at least 4 iterations
-**Correct behavior:** After confirming base image boots (iteration 1) and identifying pipeline as crash cause (iteration 2), should have immediately escalated to Arena.AI with full context for a clean, tested, shippable solution.
+**Root cause:** Did not escalate to Arena.AI after iteration 2. Burned 5+ pods, SSH failures, credential issues across 2 hours.
+**Correct behavior:** Escalate to Arena.AI at iteration 3. Not optional.
 
 ## BARAHIR: Arena Escalation Rule
-
-2 unresolved iterations → escalate to Arena.AI immediately. NOT OPTIONAL.
+2 unresolved iterations → escalate to Arena.AI. NOT OPTIONAL.
