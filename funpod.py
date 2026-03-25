@@ -602,51 +602,19 @@ class FunPodWindow(QMainWindow):
         self._worker.start()
 
     def _connect_pod(self):
-        """Open connection to running pod — web terminal or SSH."""
-        pod = self._current_pod
+        """Open Neko desktop via RunPod proxy URL."""
         pid = self._get_pod_id()
-        if not pod or not pid:
+        if not pid:
+            self._log_msg("ERROR: Enter a pod ID")
             return
 
-        runtime = pod.get("runtime")
-        if not runtime:
-            self._log_msg("Pod has no runtime — not ready yet")
-            return
-
-        ports = runtime.get("ports", [])
-
-        # Try to find SSH port
-        ssh_info = None
-        for p in ports:
-            if p.get("privatePort") == 22 and p.get("isIpPublic"):
-                ssh_info = (p["ip"], p["publicPort"])
-                break
-
-        # Try RDP
-        rdp_info = None
-        for p in ports:
-            if p.get("privatePort") == 3389 and p.get("isIpPublic"):
-                rdp_info = (p["ip"], p["publicPort"])
-                break
-
-        # Web terminal is always available
-        web_url = f"https://{pid}-22.proxy.runpod.net"
-
-        if rdp_info:
-            self._log_msg(f"Opening RDP: {rdp_info[0]}:{rdp_info[1]}")
-            # Launch mstsc (Windows Remote Desktop)
-            try:
-                subprocess.Popen(["mstsc", f"/v:{rdp_info[0]}:{rdp_info[1]}"])
-            except Exception as e:
-                self._log_msg(f"RDP launch failed: {e}")
-                webbrowser.open(web_url)
-        elif ssh_info:
-            self._log_msg(f"SSH available: ssh root@{ssh_info[0]} -p {ssh_info[1]}")
-            # Open web terminal as fallback
-            webbrowser.open(web_url)
-        else:
-            self._log_msg("Opening RunPod web terminal...")
-            webbrowser.open(web_url)
+        # Neko web UI is always on port 8080 via RunPod HTTPS proxy
+        neko_url = f"https://{pid}-8080.proxy.runpod.net"
+        self._neko_url = neko_url
+        self._btn_open_neko.setEnabled(True)
+        self._log_msg(f"🎮 Opening Neko desktop: {neko_url}")
+        self._log_msg(f"Login → admin / admin")
+        webbrowser.open(neko_url)
 
     # ── Status handler ────────────────────────────────────────────
     def _on_status(self, pod: dict):
@@ -704,6 +672,11 @@ class FunPodWindow(QMainWindow):
         self._btn_launch.setText("▶   LAUNCH POD" if not is_running else "✅  POD IS LIVE")
         self._btn_connect.setEnabled(is_running)
         self._btn_stop.setEnabled(status == "RUNNING")
+
+        # Enable neko Open Desktop button whenever pod is running
+        if is_running:
+            self._neko_url = f"https://{pod.get('id', self._get_pod_id())}-8080.proxy.runpod.net"
+            self._btn_open_neko.setEnabled(True)
 
         # Auto-connect ONLY when we initiated the launch (not on manual Refresh)
         if is_running and getattr(self, '_launching', False):

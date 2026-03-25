@@ -117,8 +117,23 @@ ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 ENV VGL_DISPLAY=egl
 
+# ── Steam persistence + init script ──────────────────────────────
+COPY neko-init.sh /usr/local/bin/neko-init.sh
+RUN chmod +x /usr/local/bin/neko-init.sh
+
+# ── Entrypoint wrapper: init → supervisord ───────────────────────
+RUN cat > /usr/local/bin/funpod-entrypoint.sh << 'ENTRYEOF'
+#!/bin/bash
+set -e
+echo "[FunPod] Running neko-init.sh..."
+/usr/local/bin/neko-init.sh || true
+echo "[FunPod] Starting supervisord..."
+exec /usr/bin/supervisord -c /etc/neko/supervisord.conf
+ENTRYEOF
+RUN chmod +x /usr/local/bin/funpod-entrypoint.sh
+
 EXPOSE 8080/tcp
 EXPOSE 59000/tcp
 
 ENTRYPOINT ["/opt/nvidia/nvidia_entrypoint.sh"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/neko/supervisord.conf"]
+CMD ["/usr/local/bin/funpod-entrypoint.sh"]
