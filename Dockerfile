@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ── Gaming deps (Steam, Vulkan, 32-bit libs) ─────────────────────
 RUN dpkg --add-architecture i386 && apt-get update && \
     apt-get install -y --no-install-recommends \
-      wget curl ca-certificates dos2unix openssh-server \
+      wget curl ca-certificates dos2unix openssh-server socat \
       lib32gcc-s1 lib32stdc++6 libc6-i386 \
       libvulkan1 libvulkan1:i386 \
       mesa-vulkan-drivers mesa-vulkan-drivers:i386 \

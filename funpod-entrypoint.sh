@@ -28,7 +28,12 @@ fi
 
 if [[ -n "$RUNPOD_TCP_PORT_59000" ]]; then
     echo "[FunPod] External TCPMUX port: $RUNPOD_TCP_PORT_59000"
+    # Neko must LISTEN on the external port so ICE candidates advertise it.
+    # RunPod forwards external:$RUNPOD_TCP_PORT_59000 → container:59000.
+    # socat bridges container:59000 → container:$RUNPOD_TCP_PORT_59000 (where neko listens).
     sed -i "s/tcpmux: 59000/tcpmux: ${RUNPOD_TCP_PORT_59000}/" /etc/neko/neko.yaml 2>/dev/null || true
+    socat TCP-LISTEN:59000,fork,reuseaddr TCP:127.0.0.1:${RUNPOD_TCP_PORT_59000} &
+    echo "[FunPod] socat bridge: container:59000 → container:${RUNPOD_TCP_PORT_59000}"
 fi
 
 # ── Steam persistence ────────────────────────────────────────────
