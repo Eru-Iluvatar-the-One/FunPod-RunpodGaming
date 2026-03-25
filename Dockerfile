@@ -2,6 +2,7 @@ FROM ghcr.io/m1k1o/neko/nvidia-base:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# ── Gaming deps (Steam, Vulkan, 32-bit libs) ─────────────────────
 RUN dpkg --add-architecture i386 && apt-get update && \
     apt-get install -y --no-install-recommends \
       wget curl ca-certificates dos2unix \
@@ -18,74 +19,11 @@ RUN dpkg --add-architecture i386 && apt-get update && \
     rm -f /tmp/steam.deb && \
     rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /etc/X11 && \
-    printf 'allowed_users=anybody\nneeds_root_rights=yes\n' \
-      > /etc/X11/Xwrapper.config
-
-RUN cat > /etc/neko/xorg.conf << 'XORGEOF'
-Section "ServerFlags"
-    Option "DontVTSwitch"        "true"
-    Option "AllowMouseOpenFail"  "true"
-    Option "PciForceNone"        "true"
-    Option "AutoEnableDevices"   "false"
-    Option "AutoAddDevices"      "false"
-EndSection
-Section "InputDevice"
-    Identifier "NekoDrv"
-    Driver     "neko"
-EndSection
-Section "Monitor"
-    Identifier  "Monitor0"
-    HorizSync   30-300
-    VertRefresh  48-165
-    Modeline "3840x2160@144" 2183.54 3840 4152 4576 5312 2160 2161 2164 2235 -HSync +VSync
-EndSection
-Section "Device"
-    Identifier "Device0"
-    Driver     "dummy"
-    VideoRam   65536
-EndSection
-Section "Screen"
-    Identifier "Screen0"
-    Device     "Device0"
-    Monitor    "Monitor0"
-    DefaultDepth 24
-    SubSection "Display"
-        Depth   24
-        Modes   "3840x2160@144"
-    EndSubSection
-EndSection
-Section "ServerLayout"
-    Identifier  "Layout0"
-    Screen      "Screen0"
-    InputDevice "NekoDrv" "CorePointer"
-EndSection
-XORGEOF
-
+# ── Neko config: TCP-only WebRTC (RunPod has NO UDP) ─────────────
+# Let neko auto-detect video encoder (no custom pipeline = no crash)
 RUN cat > /etc/neko/neko.yaml << 'YAMLEOF'
 desktop:
-  screen: "3840x2160@144"
-
-capture:
-  audio:
-    codec: "opus"
-  video:
-    codec: "h264"
-    pipeline: |
-      ximagesrc display-name={display} show-pointer=true use-damage=false !
-      video/x-raw,framerate=30/1 !
-      videoconvert !
-      queue !
-      video/x-raw,format=NV12 !
-      cudaupload !
-      cudaconvert !
-      video/x-raw(memory:CUDAMemory),format=NV12 !
-      nvh264enc name=encoder preset=2 gop-size=25 spatial-aq=true temporal-aq=true bitrate=8192 vbv-buffer-size=8192 rc-mode=6 !
-      h264parse config-interval=-1 !
-      video/x-h264,stream-format=byte-stream !
-      appsink name=appsink
-  screencast:
-    enabled: false
+  screen: "1920x1080@60"
 
 server:
   bind: ":8080"
@@ -107,24 +45,15 @@ webrtc:
   iceservers:
     frontend:
       - urls: ["stun:stun.l.google.com:19305"]
-
-plugins:
-  enabled: true
-  dir: "/etc/neko/plugins/"
 YAMLEOF
 
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=all
-ENV VGL_DISPLAY=egl
-
-# ── Steam persistence + init script ──────────────────────────────
+# ── Steam persistence script ─────────────────────────────────────
 COPY neko-init.sh /usr/local/bin/neko-init.sh
 RUN chmod +x /usr/local/bin/neko-init.sh
 
-# ── Entrypoint wrapper: init → supervisord ───────────────────────
+# ── Entrypoint wrapper ───────────────────────────────────────────
 RUN cat > /usr/local/bin/funpod-entrypoint.sh << 'ENTRYEOF'
 #!/bin/bash
-set -e
 echo "[FunPod] Running neko-init.sh..."
 /usr/local/bin/neko-init.sh || true
 echo "[FunPod] Starting supervisord..."
@@ -132,8 +61,12 @@ exec /usr/bin/supervisord -c /etc/neko/supervisord.conf
 ENTRYEOF
 RUN chmod +x /usr/local/bin/funpod-entrypoint.sh
 
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
 EXPOSE 8080/tcp
 EXPOSE 59000/tcp
 
+# nvidia-base ENTRYPOINT sets up GPU env, then runs CMD
 ENTRYPOINT ["/opt/nvidia/nvidia_entrypoint.sh"]
 CMD ["/usr/local/bin/funpod-entrypoint.sh"]
