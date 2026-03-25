@@ -31,6 +31,7 @@ desktop:
 
 server:
   bind: ":8080"
+  proxy: true
 
 member:
   provider: "multiuser"
@@ -42,6 +43,8 @@ session:
   merciful_reconnect: true
   implicit_hosting: true
   inactive_cursors: true
+  cookie:
+    enabled: false
 
 webrtc:
   icelite: true
