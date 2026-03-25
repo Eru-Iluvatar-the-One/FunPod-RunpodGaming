@@ -372,12 +372,13 @@ class NekoHealer(QThread):
     finished_signal = pyqtSignal()
 
     def __init__(self, ssh_host: str, ssh_port: int, ssh_key_path: Optional[str] = None,
-                 action: str = "deploy"):
+                 action: str = "deploy", pod_id: str = ""):
         super().__init__()
         self.ssh_host = ssh_host
         self.ssh_port = ssh_port
         self.ssh_key_path = ssh_key_path
         self.action = action  # "deploy", "diagnose", "heal"
+        self.pod_id = pod_id  # needed for RunPod proxy URL
         self.heal_target: Optional[str] = None
         self._running = True
 
@@ -491,14 +492,18 @@ class NekoHealer(QThread):
             self.log.emit("Attempting auto-heal...")
             self._auto_heal()
 
-        # Step 6: Get access URL
+        # Step 6: Get access URL — use RunPod proxy (raw IP:port won't work)
         self.progress.emit(6, total, "Getting access URL...")
-        rc, ip = self._ssh_exec(
-            "curl -s --max-time 3 https://ifconfig.co/ip 2>/dev/null", timeout=10
-        )
-        public_ip = ip.strip()
-        neko_url = f"http://{public_ip}:8080"
-        self.log.emit(f"🎮 Neko URL: {neko_url}")
+        if self.pod_id:
+            neko_url = f"https://{self.pod_id}-8080.proxy.runpod.net"
+            self.log.emit(f"🎮 Neko URL (RunPod proxy): {neko_url}")
+        else:
+            rc, ip = self._ssh_exec(
+                "curl -s --max-time 3 https://ifconfig.co/ip 2>/dev/null", timeout=10
+            )
+            public_ip = ip.strip()
+            neko_url = f"http://{public_ip}:8080"
+            self.log.emit(f"🎮 Neko URL (direct): {neko_url}")
         self.log.emit(f"Password: funpod / funpodadmin")
         self.log.emit(f"WebRTC: TCP mux on port 59000 (RunPod compatible)")
         self.deployed.emit(neko_url)

@@ -541,6 +541,13 @@ class FunPodWindow(QMainWindow):
         self._sb_label.setText(msg[:80])
 
     # ── Pod actions ───────────────────────────────────────────────
+    def _kill_worker(self):
+        """Safely stop and clean up any running worker thread."""
+        if self._worker and self._worker.isRunning():
+            self._worker.stop_polling()
+            self._worker.wait(2000)
+            self._worker = None
+
     def _start_pod(self):
         if not self._api:
             self._log_msg("ERROR: Set API key first")
@@ -550,6 +557,8 @@ class FunPodWindow(QMainWindow):
             self._log_msg("ERROR: Enter a pod ID")
             return
 
+        self._kill_worker()
+        self._launching = True  # flag: we initiated this launch
         self._btn_launch.setEnabled(False)
         self._btn_launch.setText("⏳  LAUNCHING...")
         self._progress.setValue(5)
@@ -569,6 +578,7 @@ class FunPodWindow(QMainWindow):
         pid = self._get_pod_id()
         if not pid:
             return
+        self._kill_worker()
         self._log_msg(f"Stopping pod {pid}...")
         self._worker = PodWorker(self._api, pid, "stop")
         self._worker.status_update.connect(self._on_status)
@@ -583,6 +593,7 @@ class FunPodWindow(QMainWindow):
         pid = self._get_pod_id()
         if not pid:
             return
+        self._kill_worker()
         self._log_msg(f"Polling {pid}...")
         self._worker = PodWorker(self._api, pid, "poll")
         self._worker.status_update.connect(self._on_status)
@@ -694,12 +705,14 @@ class FunPodWindow(QMainWindow):
         self._btn_connect.setEnabled(is_running)
         self._btn_stop.setEnabled(status == "RUNNING")
 
-        # Auto-connect when pod goes live
-        if is_running and self._progress.value() < 100:
+        # Auto-connect ONLY when we initiated the launch (not on manual Refresh)
+        if is_running and getattr(self, '_launching', False):
+            self._launching = False
             self._progress.setValue(100)
             self._log_msg("🎮 POD IS LIVE! Click Connect to play.")
-            # Auto-open connection
             QTimer.singleShot(1000, self._connect_pod)
+        elif is_running:
+            self._progress.setValue(100)
 
     def _on_error(self, msg):
         self._log_msg(f"❌ ERROR: {msg}")
@@ -712,6 +725,9 @@ class FunPodWindow(QMainWindow):
         self._settings.setValue("geometry", self.saveGeometry())
         if self._worker:
             self._worker.stop_polling()
+        neko_w = getattr(self, '_neko_worker', None)
+        if neko_w and neko_w.isRunning():
+            neko_w.stop()
         event.accept()
 
     # ── Neko deployment ───────────────────────────────────────────
@@ -741,7 +757,7 @@ class FunPodWindow(QMainWindow):
 
         try:
             from neko_healer import NekoHealer
-            self._neko_worker = NekoHealer(ssh_host, ssh_port, action="deploy")
+            self._neko_worker = NekoHealer(ssh_host, ssh_port, action="deploy", pod_id=self._get_pod_id())
             self._neko_worker.progress.connect(self._on_neko_progress)
             self._neko_worker.log.connect(self._log_msg)
             self._neko_worker.deployed.connect(self._on_neko_deployed)
@@ -764,7 +780,7 @@ class FunPodWindow(QMainWindow):
         self._log_msg(f"🔍 Running diagnostics on {ssh_host}:{ssh_port}...")
         try:
             from neko_healer import NekoHealer
-            self._neko_worker = NekoHealer(ssh_host, ssh_port, action="diagnose")
+            self._neko_worker = NekoHealer(ssh_host, ssh_port, action="diagnose", pod_id=self._get_pod_id())
             self._neko_worker.log.connect(self._log_msg)
             self._neko_worker.issue_found.connect(lambda c, t: self._log_msg(f"⚠ {t}"))
             self._neko_worker.error.connect(lambda e: self._log_msg(f"❌ {e}"))
@@ -780,7 +796,7 @@ class FunPodWindow(QMainWindow):
         self._log_msg(f"💊 Running auto-heal on {ssh_host}:{ssh_port}...")
         try:
             from neko_healer import NekoHealer
-            self._neko_worker = NekoHealer(ssh_host, ssh_port, action="deploy")
+            self._neko_worker = NekoHealer(ssh_host, ssh_port, action="deploy", pod_id=self._get_pod_id())
             self._neko_worker.log.connect(self._log_msg)
             self._neko_worker.deployed.connect(self._on_neko_deployed)
             self._neko_worker.error.connect(lambda e: self._log_msg(f"❌ {e}"))
