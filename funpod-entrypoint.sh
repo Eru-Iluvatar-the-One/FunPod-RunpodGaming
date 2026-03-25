@@ -31,11 +31,6 @@ if [[ -n "$RUNPOD_TCP_PORT_59000" ]]; then
     sed -i "s/tcpmux: 59000/tcpmux: ${RUNPOD_TCP_PORT_59000}/" /etc/neko/neko.yaml 2>/dev/null || true
 fi
 
-# ── Fix Xorg.wrap "Only console users" error ─────────────────────
-# Bypass Xorg.wrap by putting the real Xorg binary first in PATH
-export PATH="/usr/lib/xorg:$PATH"
-echo "[FunPod] Xorg PATH fix applied"
-
 # ── Steam persistence ────────────────────────────────────────────
 echo "[FunPod] Running neko-init.sh..."
 /usr/local/bin/neko-init.sh || true

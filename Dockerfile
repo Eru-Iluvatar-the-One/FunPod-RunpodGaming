@@ -52,8 +52,12 @@ webrtc:
       - urls: ["stun:stun.l.google.com:19305"]
 YAMLEOF
 
-# ── Fix Xorg permission (allows X server to run as non-console user) ──
-RUN mkdir -p /etc/X11 && \
+# ── Fix Xorg "Only console users" crash ──────────────────────────────
+# supervisord.conf runs: /usr/bin/X :99 ... as user neko
+# /usr/bin/X → Xorg.wrap → rejects non-console users in containers
+# Fix: point supervisord at /usr/lib/xorg/Xorg (real binary, no wrapper)
+RUN sed -i 's|/usr/bin/X |/usr/lib/xorg/Xorg |' /etc/neko/supervisord.conf && \
+    mkdir -p /etc/X11 && \
     printf 'allowed_users=anybody\nneeds_root_rights=yes\n' \
       > /etc/X11/Xwrapper.config
 
