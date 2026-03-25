@@ -52,10 +52,16 @@ webrtc:
       - urls: ["stun:stun.l.google.com:19305"]
 YAMLEOF
 
-# ── Scripts ───────────────────────────────────────────────────────
+# ── Fix Xorg permission (allows X server to run as non-console user) ──
+RUN mkdir -p /etc/X11 && \
+    printf 'allowed_users=anybody\nneeds_root_rights=yes\n' \
+      > /etc/X11/Xwrapper.config
+
+# ── Scripts (dos2unix fixes Windows CRLF line endings) ────────────
 COPY neko-init.sh /usr/local/bin/neko-init.sh
 COPY funpod-entrypoint.sh /usr/local/bin/funpod-entrypoint.sh
-RUN chmod +x /usr/local/bin/*.sh
+RUN dos2unix /usr/local/bin/neko-init.sh /usr/local/bin/funpod-entrypoint.sh && \
+    chmod +x /usr/local/bin/*.sh
 
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
