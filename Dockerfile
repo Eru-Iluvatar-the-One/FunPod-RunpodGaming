@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ── Gaming deps (Steam, Vulkan, 32-bit libs) ─────────────────────
 RUN dpkg --add-architecture i386 && apt-get update && \
     apt-get install -y --no-install-recommends \
-      wget curl ca-certificates dos2unix \
+      wget curl ca-certificates dos2unix openssh-server \
       lib32gcc-s1 lib32stdc++6 libc6-i386 \
       libvulkan1 libvulkan1:i386 \
       mesa-vulkan-drivers mesa-vulkan-drivers:i386 \
@@ -19,8 +19,12 @@ RUN dpkg --add-architecture i386 && apt-get update && \
     rm -f /tmp/steam.deb && \
     rm -rf /var/lib/apt/lists/*
 
+# ── SSH config (RunPod injects PUBLIC_KEY at runtime) ─────────────
+RUN mkdir -p /var/run/sshd && \
+    sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+
 # ── Neko config: TCP-only WebRTC (RunPod has NO UDP) ─────────────
-# Let neko auto-detect video encoder (no custom pipeline = no crash)
 RUN cat > /etc/neko/neko.yaml << 'YAMLEOF'
 desktop:
   screen: "1920x1080@60"
@@ -42,24 +46,16 @@ session:
 webrtc:
   icelite: true
   tcpmux: 59000
+  # nat1to1_placeholder
   iceservers:
     frontend:
       - urls: ["stun:stun.l.google.com:19305"]
 YAMLEOF
 
-# ── Steam persistence script ─────────────────────────────────────
+# ── Scripts ───────────────────────────────────────────────────────
 COPY neko-init.sh /usr/local/bin/neko-init.sh
-RUN chmod +x /usr/local/bin/neko-init.sh
-
-# ── Entrypoint wrapper ───────────────────────────────────────────
-RUN cat > /usr/local/bin/funpod-entrypoint.sh << 'ENTRYEOF'
-#!/bin/bash
-echo "[FunPod] Running neko-init.sh..."
-/usr/local/bin/neko-init.sh || true
-echo "[FunPod] Starting supervisord..."
-exec /usr/bin/supervisord -c /etc/neko/supervisord.conf
-ENTRYEOF
-RUN chmod +x /usr/local/bin/funpod-entrypoint.sh
+COPY funpod-entrypoint.sh /usr/local/bin/funpod-entrypoint.sh
+RUN chmod +x /usr/local/bin/*.sh
 
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
@@ -67,6 +63,6 @@ ENV NVIDIA_DRIVER_CAPABILITIES=all
 EXPOSE 8080/tcp
 EXPOSE 59000/tcp
 
-# nvidia-base ENTRYPOINT sets up GPU env, then runs CMD
-ENTRYPOINT ["/opt/nvidia/nvidia_entrypoint.sh"]
+# CRITICAL: Clear inherited ENTRYPOINT so RunPod doesn't conflict
+ENTRYPOINT []
 CMD ["/usr/local/bin/funpod-entrypoint.sh"]
