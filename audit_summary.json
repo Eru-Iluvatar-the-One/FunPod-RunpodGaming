@@ -1,0 +1,41 @@
+{
+  "directory": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming",
+  "files_audited": 4,
+  "average_score": 61.6,
+  "total_issues": {
+    "error": 0,
+    "warning": 20,
+    "style": 62,
+    "info": 20
+  },
+  "files": [
+    {
+      "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\arda_theme.py",
+      "score": 86.5,
+      "grade": "B",
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\deploy_now.py",
+      "score": 87.0,
+      "grade": "B",
+      "errors": 0,
+      "warnings": 0
+    },
+    {
+      "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\funpod.py",
+      "score": 38.0,
+      "grade": "F",
+      "errors": 0,
+      "warnings": 9
+    },
+    {
+      "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\neko_healer.py",
+      "score": 35.0,
+      "grade": "F",
+      "errors": 0,
+      "warnings": 11
+    }
+  ]
+}

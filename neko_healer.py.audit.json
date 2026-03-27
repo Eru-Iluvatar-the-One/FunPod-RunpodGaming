@@ -1,0 +1,614 @@
+{
+  "meta": {
+    "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\neko_healer.py",
+    "audited_at": "2026-03-26T19:34:10.268166",
+    "line_count": 628,
+    "encoding": "utf-8"
+  },
+  "score": {
+    "score": 50.0,
+    "grade": "F",
+    "breakdown": {
+      "error": 0,
+      "warning": 8,
+      "style": 17,
+      "info": 3
+    },
+    "line_count": 627
+  },
+  "annotation_coverage": {
+    "total_functions": 9,
+    "fully_annotated": 3,
+    "coverage_pct": 33.3
+  },
+  "issues": [
+    {
+      "line": 152,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST011",
+      "category": "bug",
+      "message": "String has {placeholders} but no f-prefix",
+      "explanation": "Line 152: looks like an f-string but the 'f' prefix is missing. The braces will print literally.",
+      "source_line": "        verify_cmd=\"curl -s -o /dev/null -w '%{http_code}' https://1.1.1.1 2>/dev/null || echo 'no_net'\",",
+      "suggested_fix": "",
+      "context_before": [
+        "        fix_cmds=[",
+        "            \"docker network prune -f 2>/dev/null || true\",",
+        "        ],"
+      ],
+      "context_after": [
+        "    ),",
+        "    \"DNS_FAILURE\": Issue(",
+        "        code=\"DNS_FAILURE\","
+      ]
+    },
+    {
+      "line": 208,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST011",
+      "category": "bug",
+      "message": "String has {placeholders} but no f-prefix",
+      "explanation": "Line 208: looks like an f-string but the 'f' prefix is missing. The braces will print literally.",
+      "source_line": "NEKO_DEPLOY_SCRIPT = \"\"\"#!/bin/bash",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "",
+        "# \u2500\u2500 Neko deploy config for RunPod (TCP-only) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+      ],
+      "context_after": [
+        "set -e",
+        "",
+        "echo \"[FunPod] === NEKO DEPLOYMENT START ===\""
+      ]
+    },
+    {
+      "line": 286,
+      "column": 0,
+      "severity": "warning",
+      "code": "SEC005",
+      "category": "security",
+      "message": "Possible hardcoded credential",
+      "explanation": "Line 286: credentials in source code are a security risk. Use environment variables or a secrets manager.",
+      "source_line": "    -e NEKO_MEMBER_MULTIUSER_USER_PASSWORD=\"funpod\" \\\\",
+      "suggested_fix": "",
+      "context_before": [
+        "    -p 8080:8080 \\\\",
+        "    -p 59000:59000/tcp \\\\",
+        "    -e NEKO_DESKTOP_SCREEN=\"1920x1080@60\" \\\\"
+      ],
+      "context_after": [
+        "    -e NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD=\"funpodadmin\" \\\\",
+        "    -e NEKO_WEBRTC_TCPMUX=\"59000\" \\\\",
+        "    -e NEKO_WEBRTC_ICELITE=\"true\" \\\\"
+      ]
+    },
+    {
+      "line": 287,
+      "column": 0,
+      "severity": "warning",
+      "code": "SEC005",
+      "category": "security",
+      "message": "Possible hardcoded credential",
+      "explanation": "Line 287: credentials in source code are a security risk. Use environment variables or a secrets manager.",
+      "source_line": "    -e NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD=\"funpodadmin\" \\\\",
+      "suggested_fix": "",
+      "context_before": [
+        "    -p 59000:59000/tcp \\\\",
+        "    -e NEKO_DESKTOP_SCREEN=\"1920x1080@60\" \\\\",
+        "    -e NEKO_MEMBER_MULTIUSER_USER_PASSWORD=\"funpod\" \\\\"
+      ],
+      "context_after": [
+        "    -e NEKO_WEBRTC_TCPMUX=\"59000\" \\\\",
+        "    -e NEKO_WEBRTC_ICELITE=\"true\" \\\\",
+        "    ${HW_ENC} \\\\"
+      ]
+    },
+    {
+      "line": 321,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST011",
+      "category": "bug",
+      "message": "String has {placeholders} but no f-prefix",
+      "explanation": "Line 321: looks like an f-string but the 'f' prefix is missing. The braces will print literally.",
+      "source_line": "DIAGNOSE_SCRIPT = \"\"\"#!/bin/bash",
+      "suggested_fix": "",
+      "context_before": [
+        "echo \"[FunPod] DONE\"",
+        "\"\"\"",
+        ""
+      ],
+      "context_after": [
+        "echo \"=== FUNPOD DIAGNOSTICS ===\"",
+        "echo \"--- System ---\"",
+        "uname -a"
+      ]
+    },
+    {
+      "line": 352,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST011",
+      "category": "bug",
+      "message": "String has {placeholders} but no f-prefix",
+      "explanation": "Line 352: looks like an f-string but the 'f' prefix is missing. The braces will print literally.",
+      "source_line": "HEAL_SCRIPT_TEMPLATE = \"\"\"#!/bin/bash",
+      "suggested_fix": "",
+      "context_before": [
+        "echo \"=== END DIAGNOSTICS ===\"",
+        "\"\"\"",
+        ""
+      ],
+      "context_after": [
+        "echo \"[FunPod Healer] Fixing: {issue_title}\"",
+        "{fix_commands}",
+        "echo \"[FunPod Healer] Verifying fix...\""
+      ]
+    },
+    {
+      "line": 481,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST011",
+      "category": "bug",
+      "message": "String has {placeholders} but no f-prefix",
+      "explanation": "Line 481: looks like an f-string but the 'f' prefix is missing. The braces will print literally.",
+      "source_line": "            \"curl -s -o /dev/null -w '%{http_code}' http://localhost:8080 2>/dev/null\",",
+      "suggested_fix": "",
+      "context_before": [
+        "        self.progress.emit(5, total, \"Verifying deployment...\")",
+        "        self.log.emit(\"Running post-deploy health check...\")",
+        "        rc, health = self._ssh_exec("
+      ],
+      "context_after": [
+        "            timeout=15",
+        "        )",
+        "        http_code = health.strip()"
+      ]
+    },
+    {
+      "line": 580,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST011",
+      "category": "bug",
+      "message": "String has {placeholders} but no f-prefix",
+      "explanation": "Line 580: looks like an f-string but the 'f' prefix is missing. The braces will print literally.",
+      "source_line": "            \"curl -s -o /dev/null -w '%{http_code}' http://localhost:8080 2>/dev/null\",",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "        # Final check",
+        "        rc, http = self._ssh_exec("
+      ],
+      "context_after": [
+        "            timeout=10",
+        "        )",
+        "        if http.strip() in (\"200\", \"301\", \"302\"):"
+      ]
+    },
+    {
+      "line": 123,
+      "column": 0,
+      "severity": "style",
+      "code": "STY001",
+      "category": "style",
+      "message": "Line is 128 chars (max 120)",
+      "explanation": "Line 123: 128 chars. Break it up for readability.",
+      "source_line": "        check_cmd=\"docker images ghcr.io/m1k1o/neko/nvidia-google-chrome --format '{{.Repository}}' 2>/dev/null || echo 'NONE'\",",
+      "suggested_fix": "",
+      "context_before": [
+        "        title=\"Neko not installed or image not pulled\",",
+        "        severity=Severity.CRITICAL,",
+        "        description=\"Neko container image not available locally.\","
+      ],
+      "context_after": [
+        "        check_expect=\"NONE\",",
+        "        fix_cmds=[",
+        "            \"docker pull ghcr.io/m1k1o/neko/nvidia-google-chrome:latest\","
+      ]
+    },
+    {
+      "line": 220,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 220: put each statement on its own line.",
+      "source_line": "if ! command -v docker &>/dev/null; then",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "# \u2500\u2500 Step 2: Ensure Docker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "echo \"[FunPod] [2/8] Checking Docker...\""
+      ],
+      "context_after": [
+        "    echo \"[FunPod] Installing Docker...\"",
+        "    curl -fsSL https://get.docker.com | sh 2>/dev/null",
+        "fi"
+      ]
+    },
+    {
+      "line": 226,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 226: put each statement on its own line.",
+      "source_line": "if ! docker info &>/dev/null 2>&1; then",
+      "suggested_fix": "",
+      "context_before": [
+        "fi",
+        "",
+        "# Start dockerd if not running"
+      ],
+      "context_after": [
+        "    echo \"[FunPod] Starting Docker daemon...\"",
+        "    dockerd --storage-driver=overlay2 &>/var/log/dockerd.log &",
+        "    for i in $(seq 1 30); do"
+      ]
+    },
+    {
+      "line": 229,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 229: put each statement on its own line.",
+      "source_line": "    for i in $(seq 1 30); do",
+      "suggested_fix": "",
+      "context_before": [
+        "if ! docker info &>/dev/null 2>&1; then",
+        "    echo \"[FunPod] Starting Docker daemon...\"",
+        "    dockerd --storage-driver=overlay2 &>/var/log/dockerd.log &"
+      ],
+      "context_after": [
+        "        docker info &>/dev/null 2>&1 && break",
+        "        sleep 1",
+        "    done"
+      ]
+    },
+    {
+      "line": 246,
+      "column": 0,
+      "severity": "style",
+      "code": "STY001",
+      "category": "style",
+      "message": "Line is 137 chars (max 120)",
+      "explanation": "Line 246: 137 chars. Break it up for readability.",
+      "source_line": "PUBLIC_IP=$(curl -s --max-time 5 https://ifconfig.co/ip 2>/dev/null || curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo \"\")",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "# \u2500\u2500 Step 5: Get public IP \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "echo \"[FunPod] [5/8] Detecting public IP...\""
+      ],
+      "context_after": [
+        "echo \"[FunPod] Public IP: ${PUBLIC_IP:-UNKNOWN}\"",
+        "",
+        "# \u2500\u2500 Step 6: Clean old containers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+      ]
+    },
+    {
+      "line": 259,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 259: put each statement on its own line.",
+      "source_line": "if nvidia-smi &>/dev/null 2>&1; then",
+      "suggested_fix": "",
+      "context_before": [
+        "# \u2500\u2500 Step 7: Pull neko image \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "echo \"[FunPod] [7/8] Pulling neko image (this may take a few minutes)...\"",
+        "# Try nvidia first, fall back to standard"
+      ],
+      "context_after": [
+        "    echo \"[FunPod] GPU detected - using nvidia image\"",
+        "    NEKO_IMAGE=\"ghcr.io/m1k1o/neko/nvidia-google-chrome:latest\"",
+        "    GPU_FLAGS=\"--gpus all\""
+      ]
+    },
+    {
+      "line": 301,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 301: put each statement on its own line.",
+      "source_line": "for i in $(seq 1 60); do",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "# \u2500\u2500 Health check loop \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+        "echo \"[FunPod] Waiting for neko to become healthy...\""
+      ],
+      "context_after": [
+        "    STATUS=$(docker inspect --format='{{.State.Health.Status}}' funpod-neko 2>/dev/null || echo \"starting\")",
+        "    RUNNING=$(docker inspect --format='{{.State.Running}}' funpod-neko 2>/dev/null || echo \"false\")",
+        "    if [ \"$RUNNING\" = \"true\" ]; then"
+      ]
+    },
+    {
+      "line": 334,
+      "column": 0,
+      "severity": "style",
+      "code": "STY001",
+      "category": "style",
+      "message": "Line is 132 chars (max 120)",
+      "explanation": "Line 334: 132 chars. Break it up for readability.",
+      "source_line": "docker ps -a --filter name=funpod-neko --format \"ID={{.ID}} Status={{.Status}} Image={{.Image}}\" 2>/dev/null || echo \"NO CONTAINERS\"",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "echo \"--- Docker ---\"",
+        "docker --version 2>/dev/null || echo \"NO DOCKER\""
+      ],
+      "context_after": [
+        "",
+        "echo \"--- Network ---\"",
+        "echo \"Public IP: $(curl -s --max-time 3 https://ifconfig.co/ip 2>/dev/null || echo UNKNOWN)\""
+      ]
+    },
+    {
+      "line": 444,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if rc != 0 or \"FUNPOD_SSH_OK\" not in out:",
+      "suggested_fix": "",
+      "context_before": [
+        "        self.progress.emit(1, total, \"Testing SSH connection...\")",
+        "        self.log.emit(f\"Connecting to root@{self.ssh_host}:{self.ssh_port}...\")",
+        "        rc, out = self._ssh_exec(\"echo 'FUNPOD_SSH_OK'\", timeout=15)"
+      ],
+      "context_after": [
+        "            self.error.emit(f\"SSH connection failed: {out}\")",
+        "            return",
+        "        self.log.emit(\"SSH connection OK\")"
+      ]
+    },
+    {
+      "line": 473,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if rc != 0 and \"DONE\" not in deploy_out:",
+      "suggested_fix": "",
+      "context_before": [
+        "            if line.startswith(\"[FunPod]\"):",
+        "                self.log.emit(line)",
+        ""
+      ],
+      "context_after": [
+        "            self.error.emit(f\"Deployment may have failed (exit {rc}). Check logs.\")",
+        "            # Don't return \u2014 try healing",
+        ""
+      ]
+    },
+    {
+      "line": 597,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if \"no gpu\" in diag or \"nvidia-smi\" not in diag:",
+      "suggested_fix": "",
+      "context_before": [
+        "        # Always flag UDP on RunPod",
+        "        found.append(KNOWN_ISSUES[\"UDP_BLOCKED\"])",
+        ""
+      ],
+      "context_after": [
+        "            if \"nvidia\" not in diag:",
+        "                found.append(KNOWN_ISSUES[\"NVIDIA_DRIVER\"])",
+        ""
+      ]
+    },
+    {
+      "line": 598,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "            if \"nvidia\" not in diag:",
+      "suggested_fix": "",
+      "context_before": [
+        "        found.append(KNOWN_ISSUES[\"UDP_BLOCKED\"])",
+        "",
+        "        if \"no gpu\" in diag or \"nvidia-smi\" not in diag:"
+      ],
+      "context_after": [
+        "                found.append(KNOWN_ISSUES[\"NVIDIA_DRIVER\"])",
+        "",
+        "        if \"no docker\" in diag:"
+      ]
+    },
+    {
+      "line": 601,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if \"no docker\" in diag:",
+      "suggested_fix": "",
+      "context_before": [
+        "            if \"nvidia\" not in diag:",
+        "                found.append(KNOWN_ISSUES[\"NVIDIA_DRIVER\"])",
+        ""
+      ],
+      "context_after": [
+        "            found.append(KNOWN_ISSUES[\"DOCKER_NOT_RUNNING\"])",
+        "",
+        "        if \"no containers\" in diag and \"no docker\" not in diag:"
+      ]
+    },
+    {
+      "line": 604,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if \"no containers\" in diag and \"no docker\" not in diag:",
+      "suggested_fix": "",
+      "context_before": [
+        "        if \"no docker\" in diag:",
+        "            found.append(KNOWN_ISSUES[\"DOCKER_NOT_RUNNING\"])",
+        ""
+      ],
+      "context_after": [
+        "            found.append(KNOWN_ISSUES[\"NEKO_NOT_INSTALLED\"])",
+        "",
+        "        shm_line = [l for l in diagnostics.split(\"\\n\") if \"SHM:\" in l]"
+      ]
+    },
+    {
+      "line": 607,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        shm_line = [l for l in diagnostics.split(\"\\n\") if \"SHM:\" in l]",
+      "suggested_fix": "",
+      "context_before": [
+        "        if \"no containers\" in diag and \"no docker\" not in diag:",
+        "            found.append(KNOWN_ISSUES[\"NEKO_NOT_INSTALLED\"])",
+        ""
+      ],
+      "context_after": [
+        "        if shm_line:",
+        "            shm_val = shm_line[0].split(\":\")[-1].strip()",
+        "            if \"M\" in shm_val.upper():"
+      ]
+    },
+    {
+      "line": 618,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if \"dns\" in diag and \"fail\" in diag:",
+      "suggested_fix": "",
+      "context_before": [
+        "                except ValueError:",
+        "                    pass",
+        ""
+      ],
+      "context_after": [
+        "            found.append(KNOWN_ISSUES[\"DNS_FAILURE\"])",
+        "",
+        "        if \"http status: 000\" in diag:"
+      ]
+    },
+    {
+      "line": 621,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "        if \"http status: 000\" in diag:",
+      "suggested_fix": "",
+      "context_before": [
+        "        if \"dns\" in diag and \"fail\" in diag:",
+        "            found.append(KNOWN_ISSUES[\"DNS_FAILURE\"])",
+        ""
+      ],
+      "context_after": [
+        "            found.append(KNOWN_ISSUES[\"PORT_CONFLICT\"])",
+        "",
+        "        return found"
+      ]
+    },
+    {
+      "line": 423,
+      "column": 0,
+      "severity": "info",
+      "code": "TYP002",
+      "category": "types",
+      "message": "Missing return type for 'run'",
+      "explanation": "Add '-> ReturnType' to the function signature.",
+      "source_line": "    def run(self):",
+      "suggested_fix": "",
+      "context_before": [
+        "        except Exception as e:",
+        "            return -1, str(e)",
+        ""
+      ],
+      "context_after": [
+        "        try:",
+        "            if self.action == \"deploy\":",
+        "                self._do_deploy()"
+      ]
+    },
+    {
+      "line": 436,
+      "column": 0,
+      "severity": "info",
+      "code": "AST006",
+      "category": "metric",
+      "message": "Function '_do_deploy' is 71 lines (getting long)",
+      "explanation": "Consider whether this function is doing too many things.",
+      "source_line": "    def _do_deploy(self):",
+      "suggested_fix": "",
+      "context_before": [
+        "        finally:",
+        "            self.finished_signal.emit()",
+        ""
+      ],
+      "context_after": [
+        "        \"\"\"Full deploy: connectivity check \u2192 diagnostics \u2192 deploy \u2192 verify \u2192 heal if needed.\"\"\"",
+        "        total = 6",
+        "        "
+      ]
+    },
+    {
+      "line": 626,
+      "column": 0,
+      "severity": "info",
+      "code": "TYP002",
+      "category": "types",
+      "message": "Missing return type for 'stop'",
+      "explanation": "Add '-> ReturnType' to the function signature.",
+      "source_line": "    def stop(self):",
+      "suggested_fix": "",
+      "context_before": [
+        "",
+        "        return found",
+        ""
+      ],
+      "context_after": [
+        "        self._running = False",
+        ""
+      ]
+    }
+  ],
+  "summary": "8 warning, 17 style, 3 info. Top: AST012(9), AST011(6), STY005(5), STY001(3), SEC005(2)."
+}

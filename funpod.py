@@ -9,7 +9,11 @@ Drop into: C:/Users/Eru/Documents/GitHub/FunPod-RunpodGaming/
 Run:        C:/Python311/python.exe funpod.py
 Requires:   pip install runpod PyQt6 requests
 """
-import sys, os, json, ctypes, webbrowser, subprocess, time
+import sys
+import json
+import ctypes
+import webbrowser
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -22,11 +26,10 @@ except Exception:
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,
-    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,
-    QStackedWidget,
+    QProgressBar,
 )
-from PyQt6.QtCore import Qt, QSettings, QTimer, QThread, pyqtSignal, QSize
-from PyQt6.QtGui import QColor, QPalette, QShortcut, QKeySequence, QFont
+from PyQt6.QtCore import Qt, QSettings, QTimer, QThread, pyqtSignal
+from PyQt6.QtGui import QColor, QPalette, QShortcut, QKeySequence
 
 import requests
 
@@ -243,7 +246,7 @@ class PodWorker(QThread):
         self.action = action
         self._running = True
 
-    def run(self):
+    def run(self) -> None:
         try:
             if self.action == "start":
                 self.log.emit("Starting pod...")
@@ -288,7 +291,7 @@ class PodWorker(QThread):
             time.sleep(5)
         self.log.emit("Timeout waiting for pod")
 
-    def stop_polling(self):
+    def stop_polling(self) -> None:
         self._running = False
 
 
@@ -465,7 +468,10 @@ class FunPodWindow(QMainWindow):
         neko_btn_row.setSpacing(8)
 
         self._btn_deploy_neko = QPushButton("🚀  Deploy Neko")
-        self._btn_deploy_neko.setStyleSheet(f"background: {C['mauve']}; color: {C['crust']}; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 700; font-size: 10pt;")
+        self._btn_deploy_neko.setStyleSheet(
+            f"background: {C['mauve']}; color: {C['crust']}; border: none; "
+            f"border-radius: 8px; padding: 8px 20px; font-weight: 700; font-size: 10pt;"
+        )
         self._btn_deploy_neko.clicked.connect(self._deploy_neko)
         neko_btn_row.addWidget(self._btn_deploy_neko)
 
@@ -802,7 +808,8 @@ class FunPodWindow(QMainWindow):
             self._log_msg("No neko URL yet. Deploy first.")
 
 
-def main():
+def main() -> None:
+    """Entry point for FunPod."""
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyleSheet(QSS)

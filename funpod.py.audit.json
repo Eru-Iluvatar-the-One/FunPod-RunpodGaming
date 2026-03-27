@@ -1,203 +1,35 @@
 {
   "meta": {
     "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\funpod.py",
-    "audited_at": "2026-03-25T00:50:36.804372",
-    "line_count": 855,
+    "audited_at": "2026-03-26T19:31:12.322859",
+    "line_count": 835,
     "encoding": "utf-8"
   },
   "score": {
-    "score": 43.0,
-    "grade": "F",
+    "score": 85.5,
+    "grade": "B",
     "breakdown": {
       "error": 0,
-      "warning": 8,
-      "style": 24,
-      "info": 6
+      "warning": 0,
+      "style": 23,
+      "info": 3
     },
-    "line_count": 854
+    "line_count": 834
   },
   "annotation_coverage": {
     "total_functions": 34,
-    "fully_annotated": 9,
-    "coverage_pct": 26.5
+    "fully_annotated": 12,
+    "coverage_pct": 35.3
   },
   "issues": [
     {
-      "line": 12,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'os' imported but never used",
-      "explanation": "You imported 'os' on line 12 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "import sys, os, json, ctypes, webbrowser, subprocess, time",
-      "suggested_fix": "",
-      "context_before": [
-        "Run:        C:/Python311/python.exe funpod.py",
-        "Requires:   pip install runpod PyQt6 requests",
-        "\"\"\""
-      ],
-      "context_after": [
-        "from pathlib import Path",
-        "from datetime import datetime",
-        "from typing import Optional"
-      ]
-    },
-    {
-      "line": 22,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QComboBox' imported but never used",
-      "explanation": "You imported 'QComboBox' on line 22 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtWidgets import (",
-      "suggested_fix": "",
-      "context_before": [
-        "except Exception:",
-        "    pass",
-        ""
-      ],
-      "context_after": [
-        "    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,",
-        "    QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,",
-        "    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,"
-      ]
-    },
-    {
-      "line": 22,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QGroupBox' imported but never used",
-      "explanation": "You imported 'QGroupBox' on line 22 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtWidgets import (",
-      "suggested_fix": "",
-      "context_before": [
-        "except Exception:",
-        "    pass",
-        ""
-      ],
-      "context_after": [
-        "    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,",
-        "    QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,",
-        "    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,"
-      ]
-    },
-    {
-      "line": 22,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QGridLayout' imported but never used",
-      "explanation": "You imported 'QGridLayout' on line 22 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtWidgets import (",
-      "suggested_fix": "",
-      "context_before": [
-        "except Exception:",
-        "    pass",
-        ""
-      ],
-      "context_after": [
-        "    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,",
-        "    QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,",
-        "    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,"
-      ]
-    },
-    {
-      "line": 22,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QMessageBox' imported but never used",
-      "explanation": "You imported 'QMessageBox' on line 22 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtWidgets import (",
-      "suggested_fix": "",
-      "context_before": [
-        "except Exception:",
-        "    pass",
-        ""
-      ],
-      "context_after": [
-        "    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,",
-        "    QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,",
-        "    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,"
-      ]
-    },
-    {
-      "line": 22,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QStackedWidget' imported but never used",
-      "explanation": "You imported 'QStackedWidget' on line 22 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtWidgets import (",
-      "suggested_fix": "",
-      "context_before": [
-        "except Exception:",
-        "    pass",
-        ""
-      ],
-      "context_after": [
-        "    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,",
-        "    QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,",
-        "    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,"
-      ]
-    },
-    {
-      "line": 28,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QSize' imported but never used",
-      "explanation": "You imported 'QSize' on line 28 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtCore import Qt, QSettings, QTimer, QThread, pyqtSignal, QSize",
-      "suggested_fix": "",
-      "context_before": [
-        "    QProgressBar, QComboBox, QGroupBox, QGridLayout, QMessageBox,",
-        "    QStackedWidget,",
-        ")"
-      ],
-      "context_after": [
-        "from PyQt6.QtGui import QColor, QPalette, QShortcut, QKeySequence, QFont",
-        "",
-        "import requests"
-      ]
-    },
-    {
-      "line": 29,
-      "column": 0,
-      "severity": "warning",
-      "code": "AST001",
-      "category": "bug",
-      "message": "'QFont' imported but never used",
-      "explanation": "You imported 'QFont' on line 29 but never use it. This wastes memory. Safe to delete.",
-      "source_line": "from PyQt6.QtGui import QColor, QPalette, QShortcut, QKeySequence, QFont",
-      "suggested_fix": "",
-      "context_before": [
-        "    QStackedWidget,",
-        ")",
-        "from PyQt6.QtCore import Qt, QSettings, QTimer, QThread, pyqtSignal, QSize"
-      ],
-      "context_after": [
-        "",
-        "import requests",
-        ""
-      ]
-    },
-    {
-      "line": 48,
+      "line": 51,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 48: put each statement on its own line.",
+      "explanation": "Line 51: put each statement on its own line.",
       "source_line": "* {{ font-family: {FU}; }}",
       "suggested_fix": "",
       "context_before": [
@@ -212,13 +44,13 @@
       ]
     },
     {
-      "line": 54,
+      "line": 57,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 54: put each statement on its own line.",
+      "explanation": "Line 57: put each statement on its own line.",
       "source_line": "    padding: 12px 16px; font-size: 13pt; font-family: {FM};",
       "suggested_fix": "",
       "context_before": [
@@ -233,13 +65,13 @@
       ]
     },
     {
-      "line": 55,
+      "line": 58,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 55: put each statement on its own line.",
+      "explanation": "Line 58: put each statement on its own line.",
       "source_line": "    letter-spacing: 1px;",
       "suggested_fix": "",
       "context_before": [
@@ -254,13 +86,13 @@
       ]
     },
     {
-      "line": 62,
+      "line": 65,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 62: put each statement on its own line.",
+      "explanation": "Line 65: put each statement on its own line.",
       "source_line": "    padding: 10px 24px; font-weight: 700; font-size: 11pt;",
       "suggested_fix": "",
       "context_before": [
@@ -275,13 +107,13 @@
       ]
     },
     {
-      "line": 68,
+      "line": 71,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 68: put each statement on its own line.",
+      "explanation": "Line 71: put each statement on its own line.",
       "source_line": "    font-size: 16pt; font-weight: 800; padding: 18px 40px;",
       "suggested_fix": "",
       "context_before": [
@@ -296,13 +128,13 @@
       ]
     },
     {
-      "line": 69,
+      "line": 72,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 69: put each statement on its own line.",
+      "explanation": "Line 72: put each statement on its own line.",
       "source_line": "    border-radius: 14px; letter-spacing: 1px;",
       "suggested_fix": "",
       "context_before": [
@@ -317,13 +149,13 @@
       ]
     },
     {
-      "line": 75,
+      "line": 78,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 75: put each statement on its own line.",
+      "explanation": "Line 78: put each statement on its own line.",
       "source_line": "    font-size: 12pt; font-weight: 700; padding: 12px 28px; border-radius: 10px;",
       "suggested_fix": "",
       "context_before": [
@@ -338,13 +170,13 @@
       ]
     },
     {
-      "line": 80,
+      "line": 83,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 80: put each statement on its own line.",
+      "explanation": "Line 83: put each statement on its own line.",
       "source_line": "    font-size: 12pt; font-weight: 700; padding: 12px 28px; border-radius: 10px;",
       "suggested_fix": "",
       "context_before": [
@@ -359,13 +191,13 @@
       ]
     },
     {
-      "line": 91,
+      "line": 94,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 91: put each statement on its own line.",
+      "explanation": "Line 94: put each statement on its own line.",
       "source_line": "    padding: 10px; font-family: {FM}; font-size: 9pt;",
       "suggested_fix": "",
       "context_before": [
@@ -380,13 +212,13 @@
       ]
     },
     {
-      "line": 95,
+      "line": 98,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 95: put each statement on its own line.",
+      "explanation": "Line 98: put each statement on its own line.",
       "source_line": "    letter-spacing: -1px; background: transparent;",
       "suggested_fix": "",
       "context_before": [
@@ -401,13 +233,13 @@
       ]
     },
     {
-      "line": 99,
+      "line": 102,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 99: put each statement on its own line.",
+      "explanation": "Line 102: put each statement on its own line.",
       "source_line": "    background: transparent;",
       "suggested_fix": "",
       "context_before": [
@@ -422,13 +254,13 @@
       ]
     },
     {
-      "line": 103,
+      "line": 106,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 103: put each statement on its own line.",
+      "explanation": "Line 106: put each statement on its own line.",
       "source_line": "    background: transparent;",
       "suggested_fix": "",
       "context_before": [
@@ -443,13 +275,13 @@
       ]
     },
     {
-      "line": 110,
+      "line": 113,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 110: put each statement on its own line.",
+      "explanation": "Line 113: put each statement on its own line.",
       "source_line": "    border-radius: 12px;",
       "suggested_fix": "",
       "context_before": [
@@ -464,13 +296,13 @@
       ]
     },
     {
-      "line": 112,
+      "line": 115,
       "column": 0,
       "severity": "style",
       "code": "STY001",
       "category": "style",
       "message": "Line is 123 chars (max 120)",
-      "explanation": "Line 112: 123 chars. Break it up for readability.",
+      "explanation": "Line 115: 123 chars. Break it up for readability.",
       "source_line": "QStatusBar {{ background: {C['crust']}; color: {C['overlay0']}; font-size: 8.5pt; border-top: 1px solid {C['surface0']}; }}",
       "suggested_fix": "",
       "context_before": [
@@ -485,13 +317,13 @@
       ]
     },
     {
-      "line": 113,
+      "line": 116,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 113: put each statement on its own line.",
+      "explanation": "Line 116: put each statement on its own line.",
       "source_line": "QStatusBar::item {{ border: none; }}",
       "suggested_fix": "",
       "context_before": [
@@ -506,13 +338,13 @@
       ]
     },
     {
-      "line": 117,
+      "line": 120,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 117: put each statement on its own line.",
+      "explanation": "Line 120: put each statement on its own line.",
       "source_line": "    padding: 8px 12px; font-size: 10pt;",
       "suggested_fix": "",
       "context_before": [
@@ -527,13 +359,13 @@
       ]
     },
     {
-      "line": 119,
+      "line": 122,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 119: put each statement on its own line.",
+      "explanation": "Line 122: put each statement on its own line.",
       "source_line": "QComboBox::drop-down {{ border: none; width: 24px; }}",
       "suggested_fix": "",
       "context_before": [
@@ -548,13 +380,13 @@
       ]
     },
     {
-      "line": 120,
+      "line": 123,
       "column": 0,
       "severity": "style",
       "code": "STY001",
       "category": "style",
       "message": "Line is 127 chars (max 120)",
-      "explanation": "Line 120: 127 chars. Break it up for readability.",
+      "explanation": "Line 123: 127 chars. Break it up for readability.",
       "source_line": "QComboBox QAbstractItemView {{ background: {C['surface0']}; color: {C['text']}; selection-background-color: {C['surface1']}; }}",
       "suggested_fix": "",
       "context_before": [
@@ -569,13 +401,13 @@
       ]
     },
     {
-      "line": 121,
+      "line": 124,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 121: put each statement on its own line.",
+      "explanation": "Line 124: put each statement on its own line.",
       "source_line": "QScrollBar:vertical {{ background: transparent; width: 8px; }}",
       "suggested_fix": "",
       "context_before": [
@@ -590,13 +422,13 @@
       ]
     },
     {
-      "line": 123,
+      "line": 126,
       "column": 0,
       "severity": "style",
       "code": "STY005",
       "category": "style",
       "message": "Multiple statements on one line (semicolon)",
-      "explanation": "Line 123: put each statement on its own line.",
+      "explanation": "Line 126: put each statement on its own line.",
       "source_line": "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}",
       "suggested_fix": "",
       "context_before": [
@@ -611,7 +443,7 @@
       ]
     },
     {
-      "line": 173,
+      "line": 176,
       "column": 0,
       "severity": "style",
       "code": "AST012",
@@ -632,34 +464,13 @@
       ]
     },
     {
-      "line": 468,
-      "column": 0,
-      "severity": "style",
-      "code": "STY001",
-      "category": "style",
-      "message": "Line is 182 chars (max 120)",
-      "explanation": "Line 468: 182 chars. Break it up for readability.",
-      "source_line": "        self._btn_deploy_neko.setStyleSheet(f\"background: {C['mauve']}; color: {C['crust']}; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 700; font-size: 10pt;\")",
-      "suggested_fix": "",
-      "context_before": [
-        "        neko_btn_row.setSpacing(8)",
-        "",
-        "        self._btn_deploy_neko = QPushButton(\"\ud83d\ude80  Deploy Neko\")"
-      ],
-      "context_after": [
-        "        self._btn_deploy_neko.clicked.connect(self._deploy_neko)",
-        "        neko_btn_row.addWidget(self._btn_deploy_neko)",
-        ""
-      ]
-    },
-    {
-      "line": 566,
+      "line": 572,
       "column": 0,
       "severity": "style",
       "code": "STY001",
       "category": "style",
       "message": "Line is 126 chars (max 120)",
-      "explanation": "Line 566: 126 chars. Break it up for readability.",
+      "explanation": "Line 572: 126 chars. Break it up for readability.",
       "source_line": "        self._status_label.setStyleSheet(f\"color: {C['yellow']}; font-size: 14pt; font-weight: 700; background: transparent;\")",
       "suggested_fix": "",
       "context_before": [
@@ -674,13 +485,13 @@
       ]
     },
     {
-      "line": 722,
+      "line": 701,
       "column": 0,
       "severity": "style",
       "code": "STY001",
       "category": "style",
       "message": "Line is 123 chars (max 120)",
-      "explanation": "Line 722: 123 chars. Break it up for readability.",
+      "explanation": "Line 701: 123 chars. Break it up for readability.",
       "source_line": "        self._status_label.setStyleSheet(f\"color: {C['red']}; font-size: 14pt; font-weight: 700; background: transparent;\")",
       "suggested_fix": "",
       "context_before": [
@@ -695,54 +506,12 @@
       ]
     },
     {
-      "line": 246,
-      "column": 0,
-      "severity": "info",
-      "code": "TYP002",
-      "category": "types",
-      "message": "Missing return type for 'run'",
-      "explanation": "Add '-> ReturnType' to the function signature.",
-      "source_line": "    def run(self):",
-      "suggested_fix": "",
-      "context_before": [
-        "        self.action = action",
-        "        self._running = True",
-        ""
-      ],
-      "context_after": [
-        "        try:",
-        "            if self.action == \"start\":",
-        "                self.log.emit(\"Starting pod...\")"
-      ]
-    },
-    {
-      "line": 291,
-      "column": 0,
-      "severity": "info",
-      "code": "TYP002",
-      "category": "types",
-      "message": "Missing return type for 'stop_polling'",
-      "explanation": "Add '-> ReturnType' to the function signature.",
-      "source_line": "    def stop_polling(self):",
-      "suggested_fix": "",
-      "context_before": [
-        "            time.sleep(5)",
-        "        self.log.emit(\"Timeout waiting for pod\")",
-        ""
-      ],
-      "context_after": [
-        "        self._running = False",
-        "",
-        ""
-      ]
-    },
-    {
-      "line": 323,
+      "line": 326,
       "column": 0,
       "severity": "info",
       "code": "AST006",
       "category": "metric",
-      "message": "Function '_build_ui' is 186 lines (very complex)",
+      "message": "Function '_build_ui' is 189 lines (very complex)",
       "explanation": "Functions over ~50 lines are hard to understand and debug. Break it into smaller helpers.",
       "source_line": "    def _build_ui(self):",
       "suggested_fix": "",
@@ -758,17 +527,17 @@
       ]
     },
     {
-      "line": 652,
+      "line": 626,
       "column": 0,
       "severity": "info",
       "code": "AST006",
       "category": "metric",
-      "message": "Function '_on_status' is 63 lines (getting long)",
+      "message": "Function '_on_status' is 68 lines (getting long)",
       "explanation": "Consider whether this function is doing too many things.",
       "source_line": "    def _on_status(self, pod: dict):",
       "suggested_fix": "",
       "context_before": [
-        "            webbrowser.open(web_url)",
+        "        webbrowser.open(neko_url)",
         "",
         "    # \u2500\u2500 Status handler \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
       ],
@@ -779,7 +548,7 @@
       ]
     },
     {
-      "line": 724,
+      "line": 703,
       "column": 0,
       "severity": "info",
       "code": "TYP001",
@@ -798,28 +567,7 @@
         "        if self._worker:",
         "            self._worker.stop_polling()"
       ]
-    },
-    {
-      "line": 832,
-      "column": 0,
-      "severity": "info",
-      "code": "TYP002",
-      "category": "types",
-      "message": "Missing return type for 'main'",
-      "explanation": "Add '-> ReturnType' to the function signature.",
-      "source_line": "def main():",
-      "suggested_fix": "",
-      "context_before": [
-        "            self._log_msg(\"No neko URL yet. Deploy first.\")",
-        "",
-        ""
-      ],
-      "context_after": [
-        "    app = QApplication(sys.argv)",
-        "    app.setStyle(\"Fusion\")",
-        "    app.setStyleSheet(QSS)"
-      ]
     }
   ],
-  "summary": "8 warning, 24 style, 6 info. Top: STY005(18), AST001(8), STY001(5), TYP002(3), AST006(2)."
+  "summary": "23 style, 3 info. Top: STY005(18), STY001(4), AST006(2), AST012(1), TYP001(1)."
 }

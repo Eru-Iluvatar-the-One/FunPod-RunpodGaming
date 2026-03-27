@@ -31,9 +31,8 @@ Usage:
     healer.heal(issue_code)      # Auto-fix specific issue
 """
 import time
-import json
 from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -404,7 +403,6 @@ class NekoHealer(QThread):
     def _ssh_exec_script(self, script: str, timeout: int = 600) -> tuple[int, str]:
         """Upload and execute a bash script over SSH."""
         import subprocess
-        import tempfile
 
         # Write script to temp file and pipe over SSH
         ssh_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10"]
