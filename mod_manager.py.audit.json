@@ -1,0 +1,258 @@
+{
+  "meta": {
+    "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\mod_manager.py",
+    "audited_at": "2026-03-27T01:24:08.279768",
+    "line_count": 390,
+    "encoding": "utf-8"
+  },
+  "score": {
+    "score": 76.5,
+    "grade": "C",
+    "breakdown": {
+      "error": 0,
+      "warning": 4,
+      "style": 6,
+      "info": 1
+    },
+    "line_count": 389
+  },
+  "annotation_coverage": {
+    "total_functions": 17,
+    "fully_annotated": 17,
+    "coverage_pct": 100.0
+  },
+  "issues": [
+    {
+      "line": 14,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST001",
+      "category": "bug",
+      "message": "'annotations' imported but never used",
+      "explanation": "You imported 'annotations' on line 14 but never use it. This wastes memory. Safe to delete.",
+      "source_line": "from __future__ import annotations",
+      "suggested_fix": "",
+      "context_before": [
+        "- Conflict detection",
+        "- Deploy to pod via SSH on launch",
+        "\"\"\""
+      ],
+      "context_after": [
+        "",
+        "import json",
+        "import shutil"
+      ]
+    },
+    {
+      "line": 22,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST001",
+      "category": "bug",
+      "message": "'QFrame' imported but never used",
+      "explanation": "You imported 'QFrame' on line 22 but never use it. This wastes memory. Safe to delete.",
+      "source_line": "from PyQt6.QtWidgets import (",
+      "suggested_fix": "",
+      "context_before": [
+        "from pathlib import Path",
+        "from typing import Optional",
+        ""
+      ],
+      "context_after": [
+        "    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,",
+        "    QListWidget, QListWidgetItem, QFileDialog, QMessageBox,",
+        "    QFrame, QProgressBar, QAbstractItemView,"
+      ]
+    },
+    {
+      "line": 22,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST001",
+      "category": "bug",
+      "message": "'QProgressBar' imported but never used",
+      "explanation": "You imported 'QProgressBar' on line 22 but never use it. This wastes memory. Safe to delete.",
+      "source_line": "from PyQt6.QtWidgets import (",
+      "suggested_fix": "",
+      "context_before": [
+        "from pathlib import Path",
+        "from typing import Optional",
+        ""
+      ],
+      "context_after": [
+        "    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,",
+        "    QListWidget, QListWidgetItem, QFileDialog, QMessageBox,",
+        "    QFrame, QProgressBar, QAbstractItemView,"
+      ]
+    },
+    {
+      "line": 28,
+      "column": 0,
+      "severity": "warning",
+      "code": "AST001",
+      "category": "bug",
+      "message": "'QIcon' imported but never used",
+      "explanation": "You imported 'QIcon' on line 28 but never use it. This wastes memory. Safe to delete.",
+      "source_line": "from PyQt6.QtGui import QColor, QIcon",
+      "suggested_fix": "",
+      "context_before": [
+        "    QFrame, QProgressBar, QAbstractItemView,",
+        ")",
+        "from PyQt6.QtCore import Qt, pyqtSignal"
+      ],
+      "context_after": [
+        "",
+        "# Catppuccin Mocha",
+        "C = {"
+      ]
+    },
+    {
+      "line": 188,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 188: put each statement on its own line.",
+      "source_line": "                border-radius: 8px;",
+      "suggested_fix": "",
+      "context_before": [
+        "                background: {C['mantle']};",
+        "                color: {C['text']};",
+        "                border: 1px solid {C['surface0']};"
+      ],
+      "context_after": [
+        "                font-size: 11pt;",
+        "                padding: 4px;",
+        "            }}"
+      ]
+    },
+    {
+      "line": 189,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 189: put each statement on its own line.",
+      "source_line": "                font-size: 11pt;",
+      "suggested_fix": "",
+      "context_before": [
+        "                color: {C['text']};",
+        "                border: 1px solid {C['surface0']};",
+        "                border-radius: 8px;"
+      ],
+      "context_after": [
+        "                padding: 4px;",
+        "            }}",
+        "            QListWidget::item {{"
+      ]
+    },
+    {
+      "line": 190,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 190: put each statement on its own line.",
+      "source_line": "                padding: 4px;",
+      "suggested_fix": "",
+      "context_before": [
+        "                border: 1px solid {C['surface0']};",
+        "                border-radius: 8px;",
+        "                font-size: 11pt;"
+      ],
+      "context_after": [
+        "            }}",
+        "            QListWidget::item {{",
+        "                padding: 10px 12px;"
+      ]
+    },
+    {
+      "line": 193,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 193: put each statement on its own line.",
+      "source_line": "                padding: 10px 12px;",
+      "suggested_fix": "",
+      "context_before": [
+        "                padding: 4px;",
+        "            }}",
+        "            QListWidget::item {{"
+      ],
+      "context_after": [
+        "                border-bottom: 1px solid {C['surface0']};",
+        "                border-radius: 4px;",
+        "            }}"
+      ]
+    },
+    {
+      "line": 195,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 195: put each statement on its own line.",
+      "source_line": "                border-radius: 4px;",
+      "suggested_fix": "",
+      "context_before": [
+        "            QListWidget::item {{",
+        "                padding: 10px 12px;",
+        "                border-bottom: 1px solid {C['surface0']};"
+      ],
+      "context_after": [
+        "            }}",
+        "            QListWidget::item:selected {{",
+        "                background: {C['surface1']};"
+      ]
+    },
+    {
+      "line": 227,
+      "column": 0,
+      "severity": "style",
+      "code": "AST012",
+      "category": "style",
+      "message": "Yoda condition (constant on left side)",
+      "explanation": "Write 'x == 5' not '5 == x'. Python convention puts the variable first.",
+      "source_line": "                if \"manifest.json\" not in names:",
+      "suggested_fix": "",
+      "context_before": [
+        "        try:",
+        "            with zipfile.ZipFile(zip_path, \"r\") as zf:",
+        "                names = zf.namelist()"
+      ],
+      "context_after": [
+        "                    QMessageBox.warning(",
+        "                        self, \"Invalid Mod\",",
+        "                        \"No manifest.json found in archive.\""
+      ]
+    },
+    {
+      "line": 120,
+      "column": 0,
+      "severity": "info",
+      "code": "AST006",
+      "category": "metric",
+      "message": "Function '_build_ui' is 93 lines (very complex)",
+      "explanation": "Functions over ~50 lines are hard to understand and debug. Break it into smaller helpers.",
+      "source_line": "    def _build_ui(self) -> None:",
+      "suggested_fix": "",
+      "context_before": [
+        "        self._build_ui()",
+        "        self._load_config()",
+        ""
+      ],
+      "context_after": [
+        "        root = QVBoxLayout(self)",
+        "        root.setContentsMargins(16, 12, 16, 12)",
+        "        root.setSpacing(12)"
+      ]
+    }
+  ],
+  "summary": "4 warning, 6 style, 1 info. Top: STY005(5), AST001(4), AST012(1), AST006(1)."
+}
