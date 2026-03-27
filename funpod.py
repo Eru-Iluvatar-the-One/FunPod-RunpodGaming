@@ -1,99 +1,220 @@
-import sys
-import webbrowser
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QLabel, QPushButton, QLineEdit, QGridLayout, QHBoxLayout
-from PyQt6.QtCore import QTimer
+"""
+funpod.py — FunPod Gaming Launcher
+Arena Pasta #1 output, deployed to repo. Needs arda_theme wiring + Fingolfin polish pass.
+PyQt6 + paramiko + requests. RunPod API integration.
+"""
+import sys, os, time, json, webbrowser
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+import paramiko, requests
 
-try:
-    from arda_theme import ThemeEngine, Theme
-except ImportError:
-    ThemeEngine = None
+COLORS = {
+    "base": "#1e1e2e", "mantle": "#181825", "crust": "#11111b",
+    "surface0": "#313244", "surface1": "#45475a", "text": "#cdd6f4",
+    "blue": "#89b4fa", "green": "#a6e3a1", "red": "#f38ba8",
+    "yellow": "#f9e2af", "mauve": "#cba6f7"
+}
 
-class PomodoroTimer(QWidget):
+class Worker(QThread):
+    finished = pyqtSignal(object)
+    error = pyqtSignal(str)
+    def __init__(self, fn, *args, **kwargs):
+        super().__init__()
+        self.fn, self.args, self.kwargs = fn, args, kwargs
+    def run(self):
+        try: self.finished.emit(self.fn(*self.args, **self.kwargs))
+        except Exception as e: self.error.emit(str(e))
+
+class FunPodApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.layout = QVBoxLayout(self)
-        self.time_label = QLabel("25:00")
-        self.layout.addWidget(self.time_label)
-        self.start_button = QPushButton("Start")
-        self.layout.addWidget(self.start_button)
+        self.settings = QSettings("ArdaTek", "FunPod")
+        self.current_ip, self.current_ssh_port = "", 22
+        self.init_ui()
         self.timer = QTimer()
-        self.time_left = 25 * 60
+        self.timer.timeout.connect(self.poll_pod)
+        self.timer.start(10000)
 
-        self.start_button.clicked.connect(self.start_timer)
-        self.timer.timeout.connect(self.update_time)
+    def init_ui(self):
+        self.setWindowTitle("FunPod Gaming Launcher")
+        self.resize(1100, 700)
+        self.setStyleSheet(f"""
+            QMainWindow, QWidget {{ background-color: {COLORS['base']}; color: {COLORS['text']}; font-family: 'Segoe UI'; font-size: 14px; }}
+            QPushButton {{ background-color: {COLORS['surface0']}; border: 1px solid {COLORS['surface1']}; border-radius: 6px; padding: 8px 16px; font-weight: bold; }}
+            QPushButton:hover {{ background-color: {COLORS['surface1']}; }}
+            QLineEdit, QComboBox, QListWidget {{ background-color: {COLORS['mantle']}; border: 1px solid {COLORS['surface1']}; border-radius: 4px; padding: 6px; }}
+        """)
+        central = QWidget()
+        self.setCentralWidget(central)
+        main_layout = QHBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar = QFrame()
+        sidebar.setFixedWidth(220)
+        sidebar.setStyleSheet(f"background-color: {COLORS['crust']};")
+        sidebar_layout = QVBoxLayout(sidebar)
+        self.stack = QStackedWidget()
+        main_layout.addWidget(sidebar)
+        main_layout.addWidget(self.stack)
+        for text, idx in [("🚀 Pod Management", 0), ("🧩 Mod Manager", 1), ("⚙️ Settings", 2)]:
+            btn = QPushButton(text)
+            btn.setStyleSheet("text-align: left; padding: 12px; background: transparent; border: none; font-size: 15px;")
+            btn.clicked.connect(lambda checked, i=idx: self.stack.setCurrentIndex(i))
+            sidebar_layout.addWidget(btn)
+        sidebar_layout.addStretch()
+        self.setup_pod_page()
+        self.setup_mod_page()
+        self.setup_settings_page()
+        self.status_bar = self.statusBar()
+        self.status_bar.setStyleSheet(f"background-color: {COLORS['mantle']}; border-top: 1px solid {COLORS['surface0']}; padding: 4px;")
+        self.lbl_ticker = QLabel("Pod: None | GPU: N/A | $0.00/hr | Total: $0.00")
+        self.status_bar.addWidget(self.lbl_ticker)
+        QShortcut(QKeySequence("Ctrl+L"), self, self.launch_desktop)
+        QShortcut(QKeySequence("Ctrl+S"), self, self.start_pod)
+        QShortcut(QKeySequence("Ctrl+Q"), self, self.close)
 
-    def start_timer(self):
-        self.timer.start(1000)
+    def setup_pod_page(self):
+        page = QWidget(); layout = QVBoxLayout(page); layout.setContentsMargins(30, 30, 30, 30)
+        h_layout = QHBoxLayout()
+        self.inp_pod_id = QLineEdit(self.settings.value("pod_id", ""))
+        self.inp_pod_id.setPlaceholderText("Enter Pod ID...")
+        btn_save_pod = QPushButton("Save ID"); btn_save_pod.clicked.connect(lambda: self.settings.setValue("pod_id", self.inp_pod_id.text()))
+        h_layout.addWidget(QLabel("Target Pod ID:")); h_layout.addWidget(self.inp_pod_id); h_layout.addWidget(btn_save_pod)
+        layout.addLayout(h_layout)
+        self.lbl_pod_status = QLabel("Status: Unknown")
+        self.lbl_pod_status.setStyleSheet(f"font-size: 24px; color: {COLORS['blue']}; margin-top: 20px;")
+        layout.addWidget(self.lbl_pod_status)
+        action_layout = QHBoxLayout()
+        for text, color, fn in [("Start Pod", COLORS['green'], self.start_pod), ("Stop Pod", COLORS['yellow'], self.stop_pod), ("Destroy Pod", COLORS['red'], self.destroy_pod)]:
+            b = QPushButton(text); b.setStyleSheet(f"background: {color}; color: {COLORS['crust']};"); b.clicked.connect(fn)
+            action_layout.addWidget(b)
+        layout.addLayout(action_layout)
+        tool_layout = QHBoxLayout()
+        for text, fn in [("🖥️ Launch Desktop", self.launch_desktop),
+                         ("🎮 Install Steam", lambda: self.exec_ssh("dpkg --add-architecture i386 && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y steam-launcher")),
+                         ("⚔️ Install Three Kingdoms", lambda: self.exec_ssh("steamcmd +login anonymous +app_update 779340 +quit"))]:
+            b = QPushButton(text); b.clicked.connect(fn); tool_layout.addWidget(b)
+        layout.addLayout(tool_layout); layout.addStretch()
+        self.stack.addWidget(page)
 
-    def update_time(self):
-        self.time_left -= 1
-        mins, secs = divmod(self.time_left, 60)
-        self.time_label.setText(f"{mins:02d}:{secs:02d}")
-        if self.time_left == 0:
-            self.timer.stop()
+    def setup_mod_page(self):
+        page = QWidget(); layout = QVBoxLayout(page); layout.setContentsMargins(30, 30, 30, 30)
+        layout.addWidget(QLabel("Installed Mods (/workspace/mods/)"))
+        self.list_mods = QListWidget(); layout.addWidget(self.list_mods)
+        btn_layout = QHBoxLayout()
+        for text, fn in [("Refresh", self.refresh_mods), ("Upload Mod", self.upload_mod), ("Toggle", self.toggle_mod)]:
+            b = QPushButton(text); b.clicked.connect(fn); btn_layout.addWidget(b)
+        layout.addLayout(btn_layout)
+        self.stack.addWidget(page)
 
-class FunPodGUI(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("FunPod Runpod Gaming")
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
-        self.tabs = QTabWidget()
-        self.layout.addWidget(self.tabs)
+    def setup_settings_page(self):
+        page = QWidget(); layout = QFormLayout(page); layout.setContentsMargins(30, 30, 30, 30)
+        self.inp_api = QLineEdit(self.settings.value("api_key", os.environ.get("RUNPOD_API_KEY", "")))
+        self.inp_api.setEchoMode(QLineEdit.EchoMode.Password)
+        self.inp_ssh = QLineEdit(self.settings.value("ssh_key", os.path.expanduser("~/.ssh/id_ed25519")))
+        btn_save = QPushButton("Save Settings"); btn_save.clicked.connect(self.save_settings)
+        layout.addRow("RunPod API Key:", self.inp_api)
+        layout.addRow("SSH Key Path:", self.inp_ssh)
+        layout.addRow("", btn_save)
+        self.stack.addWidget(page)
 
-        self.pod_control_tab = QWidget()
-        self.games_tab = QWidget()
-        self.mods_tab = QWidget()
-        self.vnc_tab = QWidget()
+    def save_settings(self):
+        self.settings.setValue("api_key", self.inp_api.text()); self.settings.setValue("ssh_key", self.inp_ssh.text())
+        self.status_bar.showMessage("Settings saved.", 3000)
 
-        self.tabs.addTab(self.pod_control_tab, "Pod Control")
-        self.tabs.addTab(self.games_tab, "Games")
-        self.tabs.addTab(self.mods_tab, "Mods")
-        self.tabs.addTab(self.vnc_tab, "VNC")
+    def _api_headers(self):
+        return {"Authorization": f"Bearer {self.inp_api.text()}"}
 
-        # Pod Control Tab
-        self.pod_control_layout = QGridLayout(self.pod_control_tab)
-        self.pod_id_label = QLabel("Pod ID:")
-        self.pod_id_input = QLineEdit("tsbej1azdwvvde")
-        self.launch_button = QPushButton("Launch Desktop")
-        self.install_steam_button = QPushButton("Install Steam")
-        self.pod_control_layout.addWidget(self.pod_id_label, 0, 0)
-        self.pod_control_layout.addWidget(self.pod_id_input, 0, 1)
-        self.pod_control_layout.addWidget(self.launch_button, 1, 0, 1, 2)
-        self.pod_control_layout.addWidget(self.install_steam_button, 2, 0, 1, 2)
-        self.pod_control_layout.addWidget(PomodoroTimer(), 3, 0, 1, 2)
-        self.launch_button.clicked.connect(self.launch_desktop)
-        self.install_steam_button.clicked.connect(self.install_steam)
+    def _graphql(self, query):
+        r = requests.post("https://api.runpod.io/graphql", json={"query": query}, headers=self._api_headers(), timeout=15)
+        r.raise_for_status()
+        return r.json()
 
-        # Games Tab
-        self.games_layout = QVBoxLayout(self.games_tab)
-        self.install_tk_button = QPushButton("Install Three Kingdoms")
-        self.games_layout.addWidget(self.install_tk_button)
-        self.install_tk_button.clicked.connect(self.install_tk)
-        
-        # Mods Tab
-        self.mods_layout = QVBoxLayout(self.mods_tab)
-        self.mods_layout.addWidget(QLabel("Mod manager would be here."))
+    def poll_pod(self):
+        pid = self.inp_pod_id.text()
+        if not pid or not self.inp_api.text(): return
+        q = f'{{ pod(input: {{podId: "{pid}"}}) {{ id desiredStatus runtime {{ gpuDisplayName uptimeInSeconds ports {{ ip isIpPublic privatePort publicPort type }} }} costPerHr machine {{ gpuDisplayName }} }} }}'
+        self.w_poll = Worker(self._graphql, q)
+        self.w_poll.finished.connect(self._on_poll)
+        self.w_poll.error.connect(lambda e: self.status_bar.showMessage(f"Poll error: {e}", 3000))
+        self.w_poll.start()
 
-        # VNC Tab
-        self.vnc_layout = QVBoxLayout(self.vnc_tab)
-        self.vnc_layout.addWidget(QLabel("VNC viewer would be here."))
-    
+    def _on_poll(self, data):
+        pod = data.get("data", {}).get("pod")
+        if not pod: return
+        rt = pod.get("runtime") or {}
+        ports = rt.get("ports") or []
+        for p in ports:
+            if p.get("privatePort") == 22 and p.get("isIpPublic"):
+                self.current_ip = p.get("ip", "")
+                self.current_ssh_port = p.get("publicPort", 22)
+        gpu = rt.get("gpuDisplayName") or pod.get("machine", {}).get("gpuDisplayName", "?")
+        cost = pod.get("costPerHr", 0)
+        uptime = rt.get("uptimeInSeconds", 0)
+        total = cost * uptime / 3600
+        self.lbl_pod_status.setText(f"Status: {pod.get('desiredStatus','?')} | {self.current_ip}:{self.current_ssh_port}")
+        self.lbl_ticker.setText(f"Pod: {pod['id']} | GPU: {gpu} | ${cost:.2f}/hr | Total: ${total:.2f}")
+
+    def start_pod(self):
+        pid = self.inp_pod_id.text()
+        self.w_act = Worker(self._graphql, f'mutation {{ podResume(input: {{podId: "{pid}"}}) {{ id }} }}')
+        self.w_act.finished.connect(lambda d: self.status_bar.showMessage("Start sent.", 3000)); self.w_act.start()
+
+    def stop_pod(self):
+        pid = self.inp_pod_id.text()
+        self.w_act = Worker(self._graphql, f'mutation {{ podStop(input: {{podId: "{pid}"}}) {{ id }} }}')
+        self.w_act.finished.connect(lambda d: self.status_bar.showMessage("Stop sent.", 3000)); self.w_act.start()
+
+    def destroy_pod(self):
+        if QMessageBox.question(self, "Destroy", "Delete pod and all data?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
+            pid = self.inp_pod_id.text()
+            self.w_act = Worker(self._graphql, f'mutation {{ podTerminate(input: {{podId: "{pid}"}}) }}')
+            self.w_act.finished.connect(lambda d: self.status_bar.showMessage("Destroyed.", 3000)); self.w_act.start()
+
     def launch_desktop(self):
-        pod_id = self.pod_id_input.text()
-        webbrowser.open(f"https://{pod_id}-80.proxy.runpod.net")
+        pid = self.inp_pod_id.text()
+        if pid: webbrowser.open(f"https://{pid}-80.proxy.runpod.net")
 
-    def install_steam(self):
-        print("SSH into the pod and install steam... (not implemented)")
-    
-    def install_tk(self):
-        print("SSH into the pod and install Three Kingdoms... (not implemented)")
+    def _ssh_client(self):
+        if not self.current_ip: raise Exception("No pod IP yet — wait for poll.")
+        k = paramiko.Ed25519Key.from_private_key_file(self.inp_ssh.text())
+        c = paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        c.connect(self.current_ip, port=int(self.current_ssh_port), username="root", pkey=k, timeout=15)
+        return c
+
+    def _ssh_run(self, cmd):
+        c = self._ssh_client(); _, stdout, stderr = c.exec_command(cmd, timeout=300)
+        out = stdout.read().decode(); c.close(); return out
+
+    def exec_ssh(self, cmd):
+        self.status_bar.showMessage(f"SSH: {cmd[:40]}...")
+        self.w_ssh = Worker(self._ssh_run, cmd)
+        self.w_ssh.finished.connect(lambda d: self.status_bar.showMessage("Done.", 3000))
+        self.w_ssh.error.connect(lambda e: self.status_bar.showMessage(f"SSH err: {e}", 5000))
+        self.w_ssh.start()
+
+    def refresh_mods(self):
+        self.w_ls = Worker(self._ssh_run, "mkdir -p /workspace/mods && ls -1 /workspace/mods")
+        self.w_ls.finished.connect(lambda d: [self.list_mods.clear(), self.list_mods.addItems([m for m in d.split('\n') if m.strip()])])
+        self.w_ls.start()
+
+    def upload_mod(self):
+        f, _ = QFileDialog.getOpenFileName(self, "Select Mod", "", "ZIP (*.zip)")
+        if not f: return
+        def _up():
+            c = self._ssh_client(); sftp = c.open_sftp()
+            sftp.put(f, f"/workspace/mods/{os.path.basename(f)}")
+            sftp.close(); c.close()
+        self.w_up = Worker(_up); self.w_up.finished.connect(lambda d: self.refresh_mods()); self.w_up.start()
+
+    def toggle_mod(self):
+        item = self.list_mods.currentItem()
+        if not item: return
+        n = item.text()
+        new = n.replace(".disabled", "") if n.endswith(".disabled") else n + ".disabled"
+        self.exec_ssh(f"mv /workspace/mods/{n} /workspace/mods/{new}")
+        QTimer.singleShot(1500, self.refresh_mods)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    if ThemeEngine:
-        ThemeEngine.apply_theme(Theme.CATPPUCCIN_MOCHA)
-    window = FunPodGUI()
-    window.show()
-    sys.exit(app.exec())
+    app = QApplication(sys.argv); app.setStyle("Fusion")
+    w = FunPodApp(); w.show(); sys.exit(app.exec())
