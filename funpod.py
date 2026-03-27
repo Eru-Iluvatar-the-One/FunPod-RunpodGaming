@@ -2,8 +2,9 @@
 FunPod — One-Click RunPod Gaming Launcher
 PyQt6 · Catppuccin Mocha · Fingolfin Standard
 
-Paste pod ID → See game grid → Click Play → noVNC desktop in browser + game launches.
+Paste pod ID → See game grid → Click Play → Desktop renders INSIDE FunPod.
 Run: C:/Python311/python.exe funpod.py
+Requires: pip install PyQt6 PyQt6-WebEngine requests
 """
 import sys
 import json
@@ -14,7 +15,6 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
-from io import BytesIO
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
@@ -24,10 +24,17 @@ except Exception:
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QFrame, QStatusBar, QTextEdit, QLineEdit,
-    QProgressBar, QScrollArea, QGridLayout, QSizePolicy,
+    QProgressBar, QScrollArea, QSizePolicy, QStackedWidget,
 )
-from PyQt6.QtCore import Qt, QSettings, QTimer, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QSettings, QTimer, QThread, pyqtSignal, QUrl
 from PyQt6.QtGui import QColor, QPalette, QShortcut, QKeySequence, QPixmap
+
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+    from PyQt6.QtWebEngineCore import QWebEngineSettings
+    HAS_WEBENGINE = True
+except ImportError:
+    HAS_WEBENGINE = False
 
 import requests
 
@@ -101,10 +108,7 @@ QLabel#gpu_label {{ color: {C['mauve']}; font-size: 10pt; font-weight: 600; back
 QLabel#cost_label {{ color: {C['yellow']}; font-size: 10pt; font-weight: 600; background: transparent; }}
 QLabel#section_header {{ color: {C['blue']}; font-size: 13pt; font-weight: 800; background: transparent; }}
 QFrame#card {{ background: {C['mantle']}; border: 1px solid {C['surface0']}; border-radius: 12px; }}
-QFrame#game_card {{
-    background: {C['mantle']}; border: 1px solid {C['surface0']};
-    border-radius: 12px;
-}}
+QFrame#game_card {{ background: {C['mantle']}; border: 1px solid {C['surface0']}; border-radius: 12px; }}
 QFrame#game_card:hover {{ border-color: {C['mauve']}; }}
 QStatusBar {{ background: {C['crust']}; color: {C['overlay0']}; font-size: 8pt; border-top: 1px solid {C['surface0']}; }}
 QStatusBar::item {{ border: none; }}
@@ -120,7 +124,6 @@ STEAM_GAMES = [
 ]
 
 STEAM_COVER = "https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/header.jpg"
-SSH_KEY     = Path.home() / ".ssh" / "id_ed25519"
 
 CFG_FILE = Path.home() / ".funpod" / "config.json"
 CFG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -268,27 +271,25 @@ class SteamLauncher(QThread):
     def run(self):
         novnc = f"https://{self.pod_id}-80.proxy.runpod.net/"
         try:
-            self.log.emit("Installing Steam via pod exec (fire-and-forget)...")
+            self.log.emit("Sending Steam install + launch to pod...")
             full_cmd = (
                 f"{STEAM_INSTALL_CMD} && "
                 f"DISPLAY=:1 nohup steam -silent steam://rungameid/{self.appid} "
                 f">/tmp/steam_{self.appid}.log 2>&1 &"
             )
             self.api.exec_cmd(self.pod_id, full_cmd)
-            self.log.emit("✅ Command sent. Steam installing (~3 min first time).")
-            self.log.emit("Opening noVNC — game will appear when Steam finishes.")
+            self.log.emit("Command sent. Loading desktop inside FunPod...")
             self.done.emit(novnc)
         except Exception as e:
-            self.log.emit(f"podExec unavailable ({e}) — clipboard fallback:")
+            self.log.emit(f"podExec failed ({e}) — loading desktop anyway, paste command manually if needed")
             cmd = (
                 f"dpkg --add-architecture i386 && apt-get update -qq && "
                 f"DEBIAN_FRONTEND=noninteractive apt-get install -y steam && "
                 f"DISPLAY=:1 steam steam://rungameid/{self.appid} &"
             )
-            self.log.emit(f"PASTE IN TERMINAL: {cmd}")
             try:
                 QApplication.clipboard().setText(cmd)
-                self.log.emit("📋 Copied to clipboard!")
+                self.log.emit("Command copied to clipboard — paste in the desktop terminal")
             except Exception:
                 pass
             self.done.emit(novnc)
@@ -351,6 +352,62 @@ class GameCard(QFrame):
         self._btn.setText("⏳ Launching..." if yes else "▶  PLAY")
 
 
+# ── Desktop embedded view ─────────────────────────────────────────
+class DesktopView(QMainWindow):
+    def __init__(self, url: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("FunPod — Gaming Desktop")
+        self.resize(1600, 900)
+        self.showMaximized()
+
+        self._view = QWebEngineView()
+        s = self._view.settings()
+        s.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+        s.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+        s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        s.setAttribute(QWebEngineSettings.WebAttribute.AllowWindowActivationFromJavaScript, True)
+        s.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
+
+        toolbar = QWidget()
+        toolbar.setFixedHeight(36)
+        toolbar.setStyleSheet(f"background:{C['crust']};")
+        tb_lay = QHBoxLayout(toolbar)
+        tb_lay.setContentsMargins(8, 0, 8, 0)
+        tb_lay.setSpacing(8)
+
+        lbl = QLabel("🎮  FunPod Desktop")
+        lbl.setStyleSheet(f"color:{C['text']};font-weight:700;font-size:10pt;background:transparent;")
+        tb_lay.addWidget(lbl)
+        tb_lay.addStretch()
+
+        btn_fs = QPushButton("⛶  Fullscreen")
+        btn_fs.setFixedHeight(26)
+        btn_fs.clicked.connect(lambda: self.showFullScreen() if not self.isFullScreen() else self.showMaximized())
+        tb_lay.addWidget(btn_fs)
+
+        btn_close = QPushButton("✕  Close")
+        btn_close.setObjectName("stop_btn")
+        btn_close.setFixedHeight(26)
+        btn_close.clicked.connect(self.close)
+        tb_lay.addWidget(btn_close)
+
+        container = QWidget()
+        lay = QVBoxLayout(container)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        lay.addWidget(toolbar)
+        lay.addWidget(self._view, 1)
+        self.setCentralWidget(container)
+
+        self._view.setUrl(QUrl(url))
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key.Key_Escape and self.isFullScreen():
+            self.showMaximized()
+        super().keyPressEvent(e)
+
+
+# ── Main window ───────────────────────────────────────────────────
 class FunPodWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -364,9 +421,8 @@ class FunPodWindow(QMainWindow):
         self._worker:     Optional[PodPoller] = None
         self._launcher:   Optional[SteamLauncher] = None
         self._pod:        dict = {}
-        self._ssh_host:   Optional[str] = None
-        self._ssh_port:   Optional[int] = None
         self._game_cards: list[GameCard] = []
+        self._desktop_win = None
 
         if geo := self._settings.value("geometry"):
             self.restoreGeometry(geo)
@@ -391,10 +447,18 @@ class FunPodWindow(QMainWindow):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(title)
 
-        sub = QLabel("Paste pod ID  →  Click game  →  Play")
+        sub = QLabel("Paste pod ID  →  Click game  →  Play inside FunPod")
         sub.setObjectName("subtitle")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(sub)
+
+        if not HAS_WEBENGINE:
+            warn = QLabel("⚠ PyQt6-WebEngine not installed — run: C:\\Python311\\python.exe -m pip install PyQt6-WebEngine")
+            warn.setStyleSheet(f"color:{C['peach']};font-size:8pt;background:transparent;")
+            warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            warn.setWordWrap(True)
+            root.addWidget(warn)
+
         root.addSpacing(4)
 
         key_row = QHBoxLayout()
@@ -421,7 +485,6 @@ class FunPodWindow(QMainWindow):
         self._pod_in.setPlaceholderText("Paste pod ID here")
         self._pod_in.setAlignment(Qt.AlignmentFlag.AlignCenter)
         pod_row.addWidget(self._pod_in, 1)
-
         self._btn_connect = QPushButton("⚡  CONNECT")
         self._btn_connect.setObjectName("connect_btn")
         self._btn_connect.setFixedWidth(160)
@@ -466,9 +529,6 @@ class FunPodWindow(QMainWindow):
         btn_refresh = QPushButton("🔄 Refresh")
         btn_refresh.clicked.connect(self._poll)
         btn_row.addWidget(btn_refresh)
-        btn_browser = QPushButton("🌐 Open Desktop")
-        btn_browser.clicked.connect(self._open_browser)
-        btn_row.addWidget(btn_browser)
         self._btn_stop = QPushButton("⏹ Stop Pod")
         self._btn_stop.setObjectName("stop_btn")
         self._btn_stop.setEnabled(False)
@@ -511,9 +571,6 @@ class FunPodWindow(QMainWindow):
         self.setStatusBar(sb)
         self._sb = QLabel("Ready")
         sb.addWidget(self._sb)
-        self._bal_lbl = QLabel("")
-        self._bal_lbl.setStyleSheet(f"color:{C['green']};font-weight:600;")
-        sb.addPermanentWidget(self._bal_lbl)
 
         QShortcut(QKeySequence("F5"), self, self._poll)
         QShortcut(QKeySequence("Ctrl+Return"), self, self._do_connect)
@@ -563,7 +620,6 @@ class FunPodWindow(QMainWindow):
         self._kill_worker()
         self._btn_connect.setEnabled(False)
         self._btn_connect.setText("⏳ Connecting...")
-        self._emit_log(f"Connecting to {pid}...")
         self._worker = PodPoller(self._api, pid, "start")
         self._worker.status.connect(self._on_status)
         self._worker.log.connect(self._emit_log)
@@ -599,52 +655,34 @@ class FunPodWindow(QMainWindow):
         self._worker.start()
         self._games_enabled(False)
 
-    def _open_browser(self):
-        pid = self._pod_id()
-        if pid:
-            url = f"https://{pid}-80.proxy.runpod.net/"
-            self._emit_log(f"Opening: {url}")
-            webbrowser.open(url)
-
     def _on_status(self, pod: dict):
         self._pod = pod
-        status   = pod.get("desiredStatus", "UNKNOWN")
-        cost     = pod.get("costPerHr", 0)
-        machine  = pod.get("machine") or {}
-        runtime  = pod.get("runtime")
+        status  = pod.get("desiredStatus", "UNKNOWN")
+        cost    = pod.get("costPerHr", 0)
+        machine = pod.get("machine") or {}
+        runtime = pod.get("runtime")
 
-        gpu_name = machine.get("gpuDisplayName", "")
-        if gpu_name:
-            self._gpu_lbl.setText(f"🖥  {gpu_name}")
+        if gpu := machine.get("gpuDisplayName", ""):
+            self._gpu_lbl.setText(f"🖥  {gpu}")
         if cost:
             self._cost_lbl.setText(f"💰  ${cost:.2f}/hr")
 
-        colors = {
-            "RUNNING": C["green"], "EXITED": C["overlay0"],
-            "CREATED": C["yellow"], "STARTING": C["yellow"],
-            "BUILDING": C["peach"], "TERMINATED": C["red"],
-        }
+        colors = {"RUNNING": C["green"], "EXITED": C["overlay0"], "CREATED": C["yellow"],
+                  "STARTING": C["yellow"], "BUILDING": C["peach"], "TERMINATED": C["red"]}
         steps  = {"RUNNING": 100, "STARTING": 50, "BUILDING": 30, "CREATED": 10, "EXITED": 0, "TERMINATED": 0}
-        color  = colors.get(status, C["text"])
         self._status_lbl.setText(f"●  {status}")
         self._status_lbl.setStyleSheet(
-            f"color:{color};font-size:13pt;font-weight:700;background:transparent;")
+            f"color:{colors.get(status, C['text'])};font-size:13pt;font-weight:700;background:transparent;")
         self._progress.setValue(steps.get(status, 0))
 
         is_live = status == "RUNNING" and runtime is not None
-
         if runtime:
             uptime = runtime.get("uptimeInSeconds", 0)
-            h, m   = divmod(uptime // 60, 60)
+            h, m = divmod(uptime // 60, 60)
             self._uptime_lbl.setText(f"⏱ {h}h {m}m")
-            for p in runtime.get("ports", []):
-                if p.get("privatePort") == 22 and p.get("isIpPublic"):
-                    self._ssh_host = p["ip"]
-                    self._ssh_port = p["publicPort"]
 
         self._games_enabled(is_live)
         self._btn_stop.setEnabled(status == "RUNNING")
-
         if is_live:
             self._emit_log("✅ Pod LIVE — click a game to play!")
 
@@ -656,28 +694,31 @@ class FunPodWindow(QMainWindow):
     def _on_play(self, appid: int, name: str):
         pid = self._pod_id()
         if not pid:
-            self._emit_log("❌ Connect to a pod first")
+            self._emit_log("❌ Connect first")
             return
         if self._launcher and self._launcher.isRunning():
-            self._emit_log("Already launching...")
             return
 
         for c in self._game_cards:
             if c.appid == appid:
                 c.set_launching(True)
 
-        self._emit_log(f"Launching {name} (appid {appid})...")
+        self._emit_log(f"Launching {name}...")
         self._launcher = SteamLauncher(self._api, pid, appid)
         self._launcher.log.connect(self._emit_log)
         self._launcher.error.connect(self._on_launch_error)
         self._launcher.done.connect(self._on_launch_done)
-        self._launcher.finished.connect(lambda: self._reset_launch_buttons())
+        self._launcher.finished.connect(self._reset_launch_buttons)
         self._launcher.start()
 
     def _on_launch_done(self, url: str):
-        self._emit_log(f"🎮 Opening: {url}")
-        self._emit_log("VNC Password: gaming123")
-        webbrowser.open(url)
+        self._emit_log(f"🎮 Loading desktop inside FunPod...")
+        if HAS_WEBENGINE:
+            self._desktop_win = DesktopView(url, self)
+            self._desktop_win.show()
+        else:
+            self._emit_log("⚠ PyQt6-WebEngine missing — opening in browser as fallback")
+            webbrowser.open(url)
 
     def _on_launch_error(self, msg: str):
         self._emit_log(f"❌ {msg}")
