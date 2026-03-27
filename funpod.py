@@ -1,5 +1,6 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QLabel, QPushButton, QLineEdit, QGridLayout
+import webbrowser
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QLabel, QPushButton, QLineEdit, QGridLayout, QHBoxLayout
 from PyQt6.QtCore import QTimer
 
 try:
@@ -52,9 +53,42 @@ class FunPodGUI(QMainWindow):
         self.tabs.addTab(self.vnc_tab, "VNC")
 
         # Pod Control Tab
-        self.pod_control_layout = QVBoxLayout(self.pod_control_tab)
-        self.pod_control_layout.addWidget(QLabel("RunPod API integration would be here."))
-        self.pod_control_layout.addWidget(PomodoroTimer())
+        self.pod_control_layout = QGridLayout(self.pod_control_tab)
+        self.pod_id_label = QLabel("Pod ID:")
+        self.pod_id_input = QLineEdit("tsbej1azdwvvde")
+        self.launch_button = QPushButton("Launch Desktop")
+        self.install_steam_button = QPushButton("Install Steam")
+        self.pod_control_layout.addWidget(self.pod_id_label, 0, 0)
+        self.pod_control_layout.addWidget(self.pod_id_input, 0, 1)
+        self.pod_control_layout.addWidget(self.launch_button, 1, 0, 1, 2)
+        self.pod_control_layout.addWidget(self.install_steam_button, 2, 0, 1, 2)
+        self.pod_control_layout.addWidget(PomodoroTimer(), 3, 0, 1, 2)
+        self.launch_button.clicked.connect(self.launch_desktop)
+        self.install_steam_button.clicked.connect(self.install_steam)
+
+        # Games Tab
+        self.games_layout = QVBoxLayout(self.games_tab)
+        self.install_tk_button = QPushButton("Install Three Kingdoms")
+        self.games_layout.addWidget(self.install_tk_button)
+        self.install_tk_button.clicked.connect(self.install_tk)
+        
+        # Mods Tab
+        self.mods_layout = QVBoxLayout(self.mods_tab)
+        self.mods_layout.addWidget(QLabel("Mod manager would be here."))
+
+        # VNC Tab
+        self.vnc_layout = QVBoxLayout(self.vnc_tab)
+        self.vnc_layout.addWidget(QLabel("VNC viewer would be here."))
+    
+    def launch_desktop(self):
+        pod_id = self.pod_id_input.text()
+        webbrowser.open(f"https://{pod_id}-80.proxy.runpod.net")
+
+    def install_steam(self):
+        print("SSH into the pod and install steam... (not implemented)")
+    
+    def install_tk(self):
+        print("SSH into the pod and install Three Kingdoms... (not implemented)")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
