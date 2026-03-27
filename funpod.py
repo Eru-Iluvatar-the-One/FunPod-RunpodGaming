@@ -1,3 +1,4 @@
+
 """
 funpod.py — FunPod Gaming Launcher
 Arena Pasta #1 output, deployed to repo. Needs arda_theme wiring + Fingolfin polish pass.
@@ -8,13 +9,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 import paramiko, requests
-
-COLORS = {
-    "base": "#1e1e2e", "mantle": "#181825", "crust": "#11111b",
-    "surface0": "#313244", "surface1": "#45475a", "text": "#cdd6f4",
-    "blue": "#89b4fa", "green": "#a6e3a1", "red": "#f38ba8",
-    "yellow": "#f9e2af", "mauve": "#cba6f7"
-}
+from arda_theme import ThemeEngine
 
 class Worker(QThread):
     finished = pyqtSignal(object)
@@ -39,26 +34,20 @@ class FunPodApp(QMainWindow):
     def init_ui(self):
         self.setWindowTitle("FunPod Gaming Launcher")
         self.resize(1100, 700)
-        self.setStyleSheet(f"""
-            QMainWindow, QWidget {{ background-color: {COLORS['base']}; color: {COLORS['text']}; font-family: 'Segoe UI'; font-size: 14px; }}
-            QPushButton {{ background-color: {COLORS['surface0']}; border: 1px solid {COLORS['surface1']}; border-radius: 6px; padding: 8px 16px; font-weight: bold; }}
-            QPushButton:hover {{ background-color: {COLORS['surface1']}; }}
-            QLineEdit, QComboBox, QListWidget {{ background-color: {COLORS['mantle']}; border: 1px solid {COLORS['surface1']}; border-radius: 4px; padding: 6px; }}
-        """)
         central = QWidget()
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
         sidebar = QFrame()
         sidebar.setFixedWidth(220)
-        sidebar.setStyleSheet(f"background-color: {COLORS['crust']};")
+        sidebar.setObjectName("sidebar")
         sidebar_layout = QVBoxLayout(sidebar)
         self.stack = QStackedWidget()
         main_layout.addWidget(sidebar)
         main_layout.addWidget(self.stack)
         for text, idx in [("🚀 Pod Management", 0), ("🧩 Mod Manager", 1), ("⚙️ Settings", 2)]:
             btn = QPushButton(text)
-            btn.setStyleSheet("text-align: left; padding: 12px; background: transparent; border: none; font-size: 15px;")
+            btn.setObjectName("sidebar_button")
             btn.clicked.connect(lambda checked, i=idx: self.stack.setCurrentIndex(i))
             sidebar_layout.addWidget(btn)
         sidebar_layout.addStretch()
@@ -66,7 +55,6 @@ class FunPodApp(QMainWindow):
         self.setup_mod_page()
         self.setup_settings_page()
         self.status_bar = self.statusBar()
-        self.status_bar.setStyleSheet(f"background-color: {COLORS['mantle']}; border-top: 1px solid {COLORS['surface0']}; padding: 4px;")
         self.lbl_ticker = QLabel("Pod: None | GPU: N/A | $0.00/hr | Total: $0.00")
         self.status_bar.addWidget(self.lbl_ticker)
         QShortcut(QKeySequence("Ctrl+L"), self, self.launch_desktop)
@@ -82,11 +70,11 @@ class FunPodApp(QMainWindow):
         h_layout.addWidget(QLabel("Target Pod ID:")); h_layout.addWidget(self.inp_pod_id); h_layout.addWidget(btn_save_pod)
         layout.addLayout(h_layout)
         self.lbl_pod_status = QLabel("Status: Unknown")
-        self.lbl_pod_status.setStyleSheet(f"font-size: 24px; color: {COLORS['blue']}; margin-top: 20px;")
+        self.lbl_pod_status.setObjectName("status_label")
         layout.addWidget(self.lbl_pod_status)
         action_layout = QHBoxLayout()
-        for text, color, fn in [("Start Pod", COLORS['green'], self.start_pod), ("Stop Pod", COLORS['yellow'], self.stop_pod), ("Destroy Pod", COLORS['red'], self.destroy_pod)]:
-            b = QPushButton(text); b.setStyleSheet(f"background: {color}; color: {COLORS['crust']};"); b.clicked.connect(fn)
+        for text, object_name, fn in [("Start Pod", "success", self.start_pod), ("Stop Pod", "warning", self.stop_pod), ("Destroy Pod", "danger", self.destroy_pod)]:
+            b = QPushButton(text); b.setObjectName(object_name); b.clicked.connect(fn)
             action_layout.addWidget(b)
         layout.addLayout(action_layout)
         tool_layout = QHBoxLayout()
@@ -216,5 +204,7 @@ class FunPodApp(QMainWindow):
         QTimer.singleShot(1500, self.refresh_mods)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv); app.setStyle("Fusion")
+    app = QApplication(sys.argv)
+    theme_engine = ThemeEngine(app, "arda_theme.py")
+    theme_engine.apply("Catppuccin Mocha")
     w = FunPodApp(); w.show(); sys.exit(app.exec())
