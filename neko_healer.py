@@ -208,12 +208,12 @@ KNOWN_ISSUES: dict[str, Issue] = {
 NEKO_DEPLOY_SCRIPT = """#!/bin/bash
 set -e
 
-echo "[FunPod] === NEKO DEPLOYMENT START ==="
+echo "[FunPod] === NEKO GAMING DEPLOYMENT START ==="
 
 # ── Step 1: System prep ──────────────────────────
 echo "[FunPod] [1/8] System prep..."
 apt-get update -qq 2>/dev/null
-apt-get install -y -qq curl wget net-tools 2>/dev/null || true
+apt-get install -y -qq curl wget net-tools fuse 2>/dev/null || true
 
 # ── Step 2: Ensure Docker ────────────────────────
 echo "[FunPod] [2/8] Checking Docker..."
@@ -232,9 +232,9 @@ if ! docker info &>/dev/null 2>&1; then
     done
 fi
 
-# ── Step 3: Fix shared memory ────────────────────
+# ── Step 3: Fix shared memory (4GB for gaming) ───
 echo "[FunPod] [3/8] Fixing shared memory..."
-mount -o remount,size=2G /dev/shm 2>/dev/null || true
+mount -o remount,size=4G /dev/shm 2>/dev/null || true
 
 # ── Step 4: Fix DNS ──────────────────────────────
 echo "[FunPod] [4/8] Fixing DNS..."
@@ -253,43 +253,59 @@ docker network prune -f 2>/dev/null || true
 fuser -k 8080/tcp 2>/dev/null || true
 fuser -k 59000/tcp 2>/dev/null || true
 
-# ── Step 7: Pull neko image ──────────────────────
-echo "[FunPod] [7/8] Pulling neko image (this may take a few minutes)..."
-# Try nvidia first, fall back to standard
+# ── Step 7: Pull neko KDE gaming image ───────────
+echo "[FunPod] [7/8] Pulling neko KDE image (full desktop + GPU support)..."
+# KDE image = full plasma desktop, runs Steam natively
+# Nvidia GPU support via --gpus all (works with CUDA images on RunPod)
 if nvidia-smi &>/dev/null 2>&1; then
-    echo "[FunPod] GPU detected - using nvidia image"
-    NEKO_IMAGE="ghcr.io/m1k1o/neko/nvidia-google-chrome:latest"
+    echo "[FunPod] GPU detected: $(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)"
     GPU_FLAGS="--gpus all"
-    HW_ENC="-e NEKO_HWENC=nvenc"
+    echo "[FunPod] GPU passthrough enabled for gaming"
 else
-    echo "[FunPod] No GPU detected - using standard image"
-    NEKO_IMAGE="ghcr.io/m1k1o/neko/google-chrome:latest"
+    echo "[FunPod] No GPU - software rendering (expect lower FPS)"
     GPU_FLAGS=""
-    HW_ENC=""
 fi
+NEKO_IMAGE="ghcr.io/m1k1o/neko/kde:latest"
 docker pull $NEKO_IMAGE
 
-# ── Step 8: Launch neko (TCP-ONLY for RunPod) ────
-echo "[FunPod] [8/8] Launching neko with TCP-only WebRTC..."
+# ── Step 8: Launch neko KDE (TCP-ONLY for RunPod) ─
+echo "[FunPod] [8/8] Launching neko KDE gaming desktop..."
 
-# KEY CONFIG: NEKO_WEBRTC_TCPMUX uses a SINGLE TCP port for ALL WebRTC traffic
-# This is the ONLY way to run neko on RunPod (no UDP support)
 docker run -d \\
     --name funpod-neko \\
     --restart unless-stopped \\
-    --shm-size=2g \\
+    --shm-size=4g \\
     --cap-add SYS_ADMIN \\
+    --cap-add NET_ADMIN \\
     ${GPU_FLAGS} \\
     -p 8080:8080 \\
     -p 59000:59000/tcp \\
+    -v /workspace:/workspace \\
     -e NEKO_DESKTOP_SCREEN="1920x1080@60" \\
     -e NEKO_MEMBER_MULTIUSER_USER_PASSWORD="funpod" \\
     -e NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD="funpodadmin" \\
     -e NEKO_WEBRTC_TCPMUX="59000" \\
     -e NEKO_WEBRTC_ICELITE="true" \\
-    ${HW_ENC} \\
     $([ -n "$PUBLIC_IP" ] && echo "-e NEKO_WEBRTC_NAT1TO1=${PUBLIC_IP}") \\
     $NEKO_IMAGE
+
+# ── Post-launch: Install Steam inside neko ────────
+echo "[FunPod] Waiting for container to start..."
+sleep 20
+
+echo "[FunPod] Installing Steam inside neko desktop..."
+docker exec funpod-neko bash -c "
+    export DEBIAN_FRONTEND=noninteractive &&
+    apt-get update -qq &&
+    apt-get install -y -qq software-properties-common curl wget &&
+    add-apt-repository multiverse -y &&
+    dpkg --add-architecture i386 &&
+    apt-get update -qq &&
+    apt-get install -y -qq libgl1 libglib2.0-0 &&
+    curl -fsSL https://repo.steampowered.com/steam/archive/precise/steam_latest.deb -o /tmp/steam.deb &&
+    dpkg -i /tmp/steam.deb 2>/dev/null; apt-get -f install -y -qq &&
+    echo 'Steam installation complete'
+" 2>&1 | grep -E '\[FunPod\]|Steam|Error|error' || true
 
 echo "[FunPod] === DEPLOYMENT COMPLETE ==="
 echo "[FunPod] Web UI: http://${PUBLIC_IP}:8080"
