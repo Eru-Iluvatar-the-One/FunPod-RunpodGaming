@@ -1,1 +1,12 @@
 runpod-gaming-rig/
+
+# Hermetic seal — build artifacts never tracked
+dist/
+build/
+__pycache__/
+*.spec
+*.exe
+*.pyc
+node_modules/
+.next/
+
