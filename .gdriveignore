@@ -1,0 +1,14 @@
+.git
+dist
+build
+__pycache__
+*.pyc
+node_modules
+venv
+.venv
+*.exe
+*.onnx
+*.bin
+*.safetensors
+*.gguf
+*.log
