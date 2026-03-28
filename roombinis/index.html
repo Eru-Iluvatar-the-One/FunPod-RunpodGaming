@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Roombinis - The Allergic Cliffs</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { background-color: #282a36; color: #f8f8f2; font-family: sans-serif; }
+    #root { width: 3840px; height: 2160px; }
+    .roombini { width: 100px; height: 100px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const Roombini = ({ roombini }) => {
+      return (
+        <svg className="roombini" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill={roombini.hair === 'red' ? '#ff5555' : '#8be9fd'} />
+          <circle cx="35" cy="40" r="5" fill={roombini.eyes === 'green' ? '#50fa7b' : '#f1fa8c'} />
+          <circle cx="65" cy="40" r="5" fill={roombini.eyes === 'green' ? '#50fa7b' : '#f1fa8c'} />
+          <rect x="45" y="55" width="10" height={roombini.nose === 'big' ? 20 : 10} fill="#ffb86c" />
+          <rect x="30" y="90" width="10" height={roombini.feet === 'flat' ? 5 : 10} fill="#ff79c6" />
+          <rect x="60" y="90" width="10" height={roombini.feet === 'flat' ? 5 : 10} fill="#ff79c6" />
+        </svg>
+      );
+    };
+
+    const App = () => {
+      const roombinis = React.useMemo(() => {
+        const traits = { hair: ['red', 'blue'], eyes: ['green', 'yellow'], nose: ['big', 'small'], feet: ['flat', 'pointy'] };
+        return Array.from({ length: 12 }, (_, i) => ({
+          id: i,
+          hair: traits.hair[i % 2],
+          eyes: traits.eyes[Math.floor(i / 2) % 2],
+          nose: traits.nose[Math.floor(i / 4) % 2],
+          feet: traits.feet[Math.floor(i / 6) % 2],
+        }));
+      }, []);
+
+      return (
+        <div>
+          <h1>Roombinis - The Allergic Cliffs</h1>
+          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            {roombinis.map(r => <Roombini key={r.id} roombini={r} />)}
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
