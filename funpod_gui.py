@@ -4,13 +4,23 @@ import sys
 import webbrowser
 from typing import Any
 
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QGridLayout, QTabWidget, QLineEdit, QPushButton, QLabel,
-    QListWidget, QFrame, QStatusBar,
-)
+from PyQt6.QtCore import QSettings, Qt, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtCore import Qt, QTimer, QSettings
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMainWindow,
+    QPushButton,
+    QStatusBar,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 C: dict[str, str] = {
     "base": "#1e1e2e", "surface": "#313244", "text": "#cdd6f4",
