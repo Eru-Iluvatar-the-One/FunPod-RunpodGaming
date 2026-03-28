@@ -1,0 +1,20 @@
+directories:
+  output: release
+  buildResources: assets
+appId: com.ardatek.funpod
+productName: FunPod
+files:
+  - filter:
+      - dist-electron/**/*
+      - dist/**/*
+win:
+  icon: assets/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: true
+  perMachine: false
+  runAfterFinish: true
+electronVersion: 28.3.3

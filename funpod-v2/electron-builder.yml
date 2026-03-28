@@ -11,7 +11,7 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  nsis:
-    oneClick: true
-    perMachine: false
-    runAfterFinish: true
+nsis:
+  oneClick: true
+  perMachine: false
+  runAfterFinish: true

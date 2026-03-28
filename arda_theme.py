@@ -1,8 +1,12 @@
 """
-arda_theme.py — Shared Circles Theme System for ALL PyQt6 Apps
-6 themes: Catppuccin Mocha, Dracula, Mordor, Fingolfin vs Morgoth, Tokyo Night, Gruvbox Material Dark.
-Frosted-glass circle buttons in top bar. Hot-swap QSS. 200ms CSS transition emulation.
-Import into ANY PyQt6 app: from arda_theme import ThemeEngine, ThemeBar
+arda_theme.py — Universal Circle Theme System for ALL Project ARDA Apps
+8 themes. Frosted-glass circle dots near window controls. Hot-swap QSS + QPalette.
+Import into ANY PyQt6 app:
+    from arda_theme import ThemeEngine, ThemeBar, THEMES
+Usage:
+    engine = ThemeEngine(app)
+    bar = engine.create_bar(parent)  # Add to title bar area, top-right
+    engine.apply_current()
 """
 from typing import Callable
 
@@ -77,6 +81,28 @@ THEMES: dict[str, dict[str, str]] = {
         "teal": "#8ec07c", "sky": "#83a598", "sapphire": "#689d6a",
         "lavender": "#d3869b", "pink": "#d3869b",
         "accent": "#fabd2f", "circle": "#fabd2f",
+    },
+    "Nord": {
+        "base": "#2e3440", "mantle": "#292e39", "crust": "#242933",
+        "surface0": "#3b4252", "surface1": "#434c5e", "surface2": "#4c566a",
+        "overlay0": "#616e88", "overlay1": "#6e7a94",
+        "text": "#eceff4", "subtext0": "#d8dee9", "subtext1": "#e5e9f0",
+        "red": "#bf616a", "green": "#a3be8c", "yellow": "#ebcb8b",
+        "blue": "#81a1c1", "mauve": "#b48ead", "peach": "#d08770",
+        "teal": "#8fbcbb", "sky": "#88c0d0", "sapphire": "#5e81ac",
+        "lavender": "#b48ead", "pink": "#b48ead",
+        "accent": "#88c0d0", "circle": "#88c0d0",
+    },
+    u"Ros\xe9 Pine": {
+        "base": "#191724", "mantle": "#1f1d2e", "crust": "#16141f",
+        "surface0": "#26233a", "surface1": "#2a2740", "surface2": "#312e47",
+        "overlay0": "#6e6a86", "overlay1": "#7a7693",
+        "text": "#e0def4", "subtext0": "#908caa", "subtext1": "#c4a7e7",
+        "red": "#eb6f92", "green": "#31748f", "yellow": "#f6c177",
+        "blue": "#9ccfd8", "mauve": "#c4a7e7", "peach": "#ebbcba",
+        "teal": "#9ccfd8", "sky": "#9ccfd8", "sapphire": "#31748f",
+        "lavender": "#c4a7e7", "pink": "#ebbcba",
+        "accent": "#c4a7e7", "circle": "#c4a7e7",
     },
 }
 
