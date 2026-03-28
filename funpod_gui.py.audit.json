@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "file": "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\funpod_gui.py",
+    "audited_at": "2026-03-27T20:48:28.511183",
+    "line_count": 364,
+    "encoding": "utf-8"
+  },
+  "score": {
+    "score": 97.5,
+    "grade": "A",
+    "breakdown": {
+      "error": 0,
+      "warning": 0,
+      "style": 4,
+      "info": 1
+    },
+    "line_count": 363
+  },
+  "annotation_coverage": {
+    "total_functions": 8,
+    "fully_annotated": 8,
+    "coverage_pct": 100.0
+  },
+  "issues": [
+    {
+      "line": 27,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 27: put each statement on its own line.",
+      "source_line": "    border-top-left-radius: 6px; border-top-right-radius: 6px;",
+      "suggested_fix": "",
+      "context_before": [
+        "QTabBar::tab {{",
+        "    background: {C['surface']}; color: {C['text']}; padding: 8px 16px;",
+        "    border: 1px solid {C['overlay']}; border-bottom: none;"
+      ],
+      "context_after": [
+        "    margin-right: 2px;",
+        "}}",
+        "QTabBar::tab:selected {{ background: {C['base']}; color: {C['accent']}; }}"
+      ]
+    },
+    {
+      "line": 28,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 28: put each statement on its own line.",
+      "source_line": "    margin-right: 2px;",
+      "suggested_fix": "",
+      "context_before": [
+        "    background: {C['surface']}; color: {C['text']}; padding: 8px 16px;",
+        "    border: 1px solid {C['overlay']}; border-bottom: none;",
+        "    border-top-left-radius: 6px; border-top-right-radius: 6px;"
+      ],
+      "context_after": [
+        "}}",
+        "QTabBar::tab:selected {{ background: {C['base']}; color: {C['accent']}; }}",
+        "QLineEdit {{"
+      ]
+    },
+    {
+      "line": 39,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 39: put each statement on its own line.",
+      "source_line": "    padding: 6px 14px; font-weight: bold;",
+      "suggested_fix": "",
+      "context_before": [
+        "QPushButton {{",
+        "    background: {C['surface']}; color: {C['text']};",
+        "    border: 1px solid {C['overlay']}; border-radius: 6px;"
+      ],
+      "context_after": [
+        "}}",
+        "QPushButton:hover {{ background: {C['overlay']}; border-color: {C['accent']}; }}",
+        "QPushButton:pressed {{ background: {C['accent']}; color: {C['base']}; }}"
+      ]
+    },
+    {
+      "line": 46,
+      "column": 0,
+      "severity": "style",
+      "code": "STY005",
+      "category": "style",
+      "message": "Multiple statements on one line (semicolon)",
+      "explanation": "Line 46: put each statement on its own line.",
+      "source_line": "    border-radius: 10px; padding: 12px;",
+      "suggested_fix": "",
+      "context_before": [
+        "QLabel {{ color: {C['text']}; }}",
+        "QFrame#gamecard {{",
+        "    background: {C['surface']}; border: 1px solid {C['overlay']};"
+      ],
+      "context_after": [
+        "}}",
+        "QFrame#gamecard:hover {{ border-color: {C['accent']}; }}",
+        "QListWidget {{"
+      ]
+    },
+    {
+      "line": 143,
+      "column": 0,
+      "severity": "info",
+      "code": "AST006",
+      "category": "metric",
+      "message": "Function '_build_ui' is 131 lines (very complex)",
+      "explanation": "Functions over ~50 lines are hard to understand and debug. Break it into smaller helpers.",
+      "source_line": "    def _build_ui(self) -> None:",
+      "suggested_fix": "",
+      "context_before": [
+        "        self._build_ui()",
+        "        QShortcut(QKeySequence(\"Ctrl+Q\"), self, self.close)",
+        ""
+      ],
+      "context_after": [
+        "        central = QWidget()",
+        "        self.setCentralWidget(central)",
+        "        main = QVBoxLayout(central)"
+      ]
+    }
+  ],
+  "summary": "4 style, 1 info. Top: STY005(4), AST006(1)."
+}
