@@ -43,7 +43,7 @@ Docker Hub: `eruilu/funfunpod:latest`
 ## Session Fixes Done (this session, separate chat)
 - Ctrl+Shift+G AHK hotkey → sync-all-repos.ps1 (live)
 - sync-all-repos.ps1 dupes deleted (3 copies → 1 canonical at Shared/scripts/)
-- MCP config expanded: C:\Users\Eru\Documents\GitHub added to filesystem paths
+- MCP config expanded: D:\GitHub added to filesystem paths
 - mcp-everything server written (ES CLI)
 - mcp-fluent server written (named pipe)
 - Both wired into claude_desktop_config.json

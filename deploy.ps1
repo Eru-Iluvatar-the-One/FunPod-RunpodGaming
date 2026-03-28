@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $DOCKER = "C:\Program Files\Docker\Docker\resources\bin\docker.exe"
 $GIT    = "C:\Program Files\Git\bin\git.exe"
-$REPO   = "C:\Users\Eru\Documents\GitHub\FunPod-RunpodGaming"
+$REPO   = "D:\GitHub\FunPod-RunpodGaming"
 $IMAGE  = "eruilu/funfunpod:latest"
 
 # ── Secrets from registry ────────────────────────────────────

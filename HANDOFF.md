@@ -38,13 +38,13 @@ Eru arrives with **Gemini Deep Research report** containing corrected:
 Read Gemini report. State WHAT we're building, HOW, and WHY. Get Eru's approval.
 
 ### Step 1: Implement Fixes
-- Write corrected `Dockerfile` to `C:\Users\Eru\Documents\GitHub\FunPod-RunpodGaming\Dockerfile`
+- Write corrected `Dockerfile` to `D:\GitHub\FunPod-RunpodGaming\Dockerfile`
 - Write corrected `neko-init.sh` to same repo
 - Commit both via `github:create_or_update_file` (get SHA first)
 
 ### Step 2: Build & Push
 ```powershell
-Set-Location 'C:\Users\Eru\Documents\GitHub\FunPod-RunpodGaming'
+Set-Location 'D:\GitHub\FunPod-RunpodGaming'
 & .\build-and-push.ps1
 ```
 Wait for completion. Verify push succeeded on Docker Hub.

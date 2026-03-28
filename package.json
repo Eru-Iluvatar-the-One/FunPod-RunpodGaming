@@ -1,0 +1,21 @@
+{
+  "name": "funpod-runpodgaming",
+  "version": "1.0.0",
+  "description": "One-shot RunPod cloud gaming setup. NVIDIA L4/L40 → Sunshine → Moonlight → 4K@144Hz.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eru-Iluvatar-the-One/FunPod-RunpodGaming.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Eru-Iluvatar-the-One/FunPod-RunpodGaming/issues"
+  },
+  "homepage": "https://github.com/Eru-Iluvatar-the-One/FunPod-RunpodGaming#readme"
+}
