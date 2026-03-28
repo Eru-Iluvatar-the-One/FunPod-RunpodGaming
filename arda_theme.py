@@ -4,15 +4,11 @@ arda_theme.py — Shared Circles Theme System for ALL PyQt6 Apps
 Frosted-glass circle buttons in top bar. Hot-swap QSS. 200ms CSS transition emulation.
 Import into ANY PyQt6 app: from arda_theme import ThemeEngine, ThemeBar
 """
-from __future__ import annotations
-
 from typing import Callable
 
-from PyQt6.QtWidgets import (
-    QWidget, QHBoxLayout, QPushButton, QApplication, QGraphicsOpacityEffect,
-)
-from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QSettings, QSize
-from PyQt6.QtGui import QColor, QPalette, QPainter, QBrush, QPen
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QApplication
+from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtGui import QColor, QPalette
 
 # ── THEME DEFINITIONS ────────────────────────────────────────────────
 THEMES: dict[str, dict[str, str]] = {
