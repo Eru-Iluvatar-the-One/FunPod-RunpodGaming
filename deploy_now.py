@@ -19,32 +19,32 @@ D_THEME = "eNrFWety27gV/q+nQNUfkVNZC15FKpNObdnepJPsxrHb/ZHJeEAQlDimCIaE4mgznulD9
 D_README = "eNptVMFu4zYQvfsrBsglUS252QI9+GYk2cDbpHEct0DRLSKaGktcyySXpOx1ERQ99QOKfuF+SR8pO5um69OYnHmcee+NTuhCOGaXz9mawSDL3pkleRZONiTNZiN0RZJ1YJdl9PnPf+iaN0qr3JodO67IsXSdwjWZLjgWshmSFG1LHzvumFAvat4AYEgJKj1GPjgRuN5TMKb1xWBwckKLGMbohObPoBcR6j5BnZZ98WOEf0zwhd2XZ4PBbH8fvqeK/ToYS8JaWhnXP610/dwYHkO7W3aev7TtU1sNi6rp4pSxmSx7yyJ0jv04ywY5zRznrREVxq1EEEsBALOi8zev4eJrK+U2r0EJHGip2AOs548mU1K4qsGDMjo1vFK6iggb47iHGRLqOKbg2OIlo0WrfkcfVgXZsO9J9aIVbo8met3wSKLNS6ds8LRToSGz/MAyPdWgpAUg0h4CxvQEMeQaJ2PSvKPPf/3di1elMLJ9CP1aWcsVCueqbkIuWyXXcAnm+BQIInfjlD4E924NkSP68OCEOGEwmM2ZHRDuO9Tm1pmNDbTsQjDap5xoOnR5HCZWu565SRdM7sWWo5DlH6Oi90Pu4NzRs6CPLWj3xQdwVUYp552OKpZlObgYv5/tQ2P0d+fn722KCv7E9DVfpYJYzh871TuByuur28ls+sPVLyWx3ipndHQ2bYVTYtky9ib0bAu6NqbGyVHt2ZTWvD8YXbgaiXPTYqyoAmuFwUd0g87pwazCDg3RlYZ70RcyLnl7Zz0yZq0IIGnzfNnrOJmObm9enS1YNlphJpqARjAjo6P7BnAVtZfr+HyW/TTNsjH1W/QNvBOs7aRUmm6NbAQ8DzFDgy1O2ZOU/d/53hTf0ttW+IZOt0pQWafb/OjeLQuFRY3Vl1igWP/u4e7HZGnlA3aDsQ3/07RM3c4ZQ8OBM2eihUHZ0zEmRJ2zBhv4NHjKj78XEXJ/nbhKLHj922lRjA7xGSqni8kl7YxbR5/GxRASUnuV4lMrXDR+S5USLbszSlAL1jXE+dkoyQnv5UEETQFqZPiy1+lzqE1g34PcYgGNzy9Mxfmkq1QwLmF95TxCxv/YAix+2Cc8axxM0CpD9kAJcCNTN3hbe2g8c2oLztL3+jAxlM5zGHomXIgfL+j5gpkmBOvHo1EN83bLAjs4unJdPm074AiXIzu/05iQpfF7KLYpssG/0k8kJQ=="
 
 print("=== DEPLOYING ALL FILES ===")
-w("C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\funpod.py", D_FUNPOD)
-w("C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\neko_healer.py", D_NEKO)
-w("C:\\Users\\Eru\\Documents\\GitHub\\ArdaTek\\ardatek_call_queue.py", D_ARDATEK)
-w("C:\\Users\\Eru\\Documents\\GitHub\\Career-Repo\\career_call_queue.py", D_CAREER)
-w("C:\\Users\\Eru\\Documents\\GitHub\\Career-Repo\\README.md", D_README)
+w("D:\\GitHub\\FunPod-RunpodGaming\\funpod.py", D_FUNPOD)
+w("D:\\GitHub\\FunPod-RunpodGaming\\neko_healer.py", D_NEKO)
+w("D:\\GitHub\\ArdaTek\\ardatek_call_queue.py", D_ARDATEK)
+w("D:\\GitHub\\Career-Repo\\career_call_queue.py", D_CAREER)
+w("D:\\GitHub\\Career-Repo\\README.md", D_README)
 
 print("\n--- Theme deployment ---")
-if not os.path.exists("C:\\Users\\Eru\\Documents\\GitHub\\ProjectArda-2Trees-OmniTelperion-LaurelinOmni\\arda_theme.py"):
-    w("C:\\Users\\Eru\\Documents\\GitHub\\ProjectArda-2Trees-OmniTelperion-LaurelinOmni\\arda_theme.py", D_THEME)
+if not os.path.exists("D:\\GitHub\\ProjectArda-2Trees-OmniTelperion-LaurelinOmni\\arda_theme.py"):
+    w("D:\\GitHub\\ProjectArda-2Trees-OmniTelperion-LaurelinOmni\\arda_theme.py", D_THEME)
 else:
-    print("  EXISTS  " + "C:\\Users\\Eru\\Documents\\GitHub\\ProjectArda-2Trees-OmniTelperion-LaurelinOmni\\arda_theme.py")
-if not os.path.exists("C:\\Users\\Eru\\Documents\\GitHub\\Don-Gato-Apo\\arda_theme.py"):
-    w("C:\\Users\\Eru\\Documents\\GitHub\\Don-Gato-Apo\\arda_theme.py", D_THEME)
+    print("  EXISTS  " + "D:\\GitHub\\ProjectArda-2Trees-OmniTelperion-LaurelinOmni\\arda_theme.py")
+if not os.path.exists("D:\\GitHub\\Don-Gato-Apo\\arda_theme.py"):
+    w("D:\\GitHub\\Don-Gato-Apo\\arda_theme.py", D_THEME)
 else:
-    print("  EXISTS  " + "C:\\Users\\Eru\\Documents\\GitHub\\Don-Gato-Apo\\arda_theme.py")
-if not os.path.exists("C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\arda_theme.py"):
-    w("C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\arda_theme.py", D_THEME)
+    print("  EXISTS  " + "D:\\GitHub\\Don-Gato-Apo\\arda_theme.py")
+if not os.path.exists("D:\\GitHub\\FunPod-RunpodGaming\\arda_theme.py"):
+    w("D:\\GitHub\\FunPod-RunpodGaming\\arda_theme.py", D_THEME)
 else:
-    print("  EXISTS  " + "C:\\Users\\Eru\\Documents\\GitHub\\FunPod-RunpodGaming\\arda_theme.py")
-if not os.path.exists("C:\\Users\\Eru\\Documents\\GitHub\\Career-Repo\\arda_theme.py"):
-    w("C:\\Users\\Eru\\Documents\\GitHub\\Career-Repo\\arda_theme.py", D_THEME)
+    print("  EXISTS  " + "D:\\GitHub\\FunPod-RunpodGaming\\arda_theme.py")
+if not os.path.exists("D:\\GitHub\\Career-Repo\\arda_theme.py"):
+    w("D:\\GitHub\\Career-Repo\\arda_theme.py", D_THEME)
 else:
-    print("  EXISTS  " + "C:\\Users\\Eru\\Documents\\GitHub\\Career-Repo\\arda_theme.py")
-if not os.path.exists("C:\\Users\\Eru\\Documents\\GitHub\\Repo-for-LLM-Creation\\arda_theme.py"):
-    w("C:\\Users\\Eru\\Documents\\GitHub\\Repo-for-LLM-Creation\\arda_theme.py", D_THEME)
+    print("  EXISTS  " + "D:\\GitHub\\Career-Repo\\arda_theme.py")
+if not os.path.exists("D:\\GitHub\\Repo-for-LLM-Creation\\arda_theme.py"):
+    w("D:\\GitHub\\Repo-for-LLM-Creation\\arda_theme.py", D_THEME)
 else:
-    print("  EXISTS  " + "C:\\Users\\Eru\\Documents\\GitHub\\Repo-for-LLM-Creation\\arda_theme.py")
+    print("  EXISTS  " + "D:\\GitHub\\Repo-for-LLM-Creation\\arda_theme.py")
 
 print("\n=== DEPLOY COMPLETE ===")
