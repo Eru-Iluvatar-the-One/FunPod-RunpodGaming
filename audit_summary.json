@@ -1,55 +1,55 @@
 {
   "directory": "D:\\GitHub\\FunPod-RunpodGaming",
   "files_audited": 6,
-  "average_score": 64.1,
+  "average_score": 100.0,
   "total_issues": {
-    "error": 1,
-    "warning": 18,
-    "style": 133,
-    "info": 19
+    "error": 0,
+    "warning": 0,
+    "style": 0,
+    "info": 0
   },
   "files": [
     {
       "file": "D:\\GitHub\\FunPod-RunpodGaming\\arda_theme.py",
-      "score": 46.5,
-      "grade": "F",
+      "score": 100,
+      "grade": "A",
       "errors": 0,
       "warnings": 0
     },
     {
       "file": "D:\\GitHub\\FunPod-RunpodGaming\\deploy_now.py",
-      "score": 87.0,
-      "grade": "B",
+      "score": 100,
+      "grade": "A",
       "errors": 0,
       "warnings": 0
     },
     {
       "file": "D:\\GitHub\\FunPod-RunpodGaming\\funpod.py",
-      "score": 83.5,
-      "grade": "B",
-      "errors": 1,
+      "score": 100,
+      "grade": "A",
+      "errors": 0,
       "warnings": 0
     },
     {
       "file": "D:\\GitHub\\FunPod-RunpodGaming\\funpod_gui.py",
-      "score": 26.0,
-      "grade": "F",
+      "score": 100,
+      "grade": "A",
       "errors": 0,
-      "warnings": 9
+      "warnings": 0
     },
     {
       "file": "D:\\GitHub\\FunPod-RunpodGaming\\mod_manager.py",
-      "score": 91.5,
+      "score": 100,
       "grade": "A",
       "errors": 0,
-      "warnings": 1
+      "warnings": 0
     },
     {
       "file": "D:\\GitHub\\FunPod-RunpodGaming\\neko_healer.py",
-      "score": 50.0,
-      "grade": "F",
+      "score": 100,
+      "grade": "A",
       "errors": 0,
-      "warnings": 8
+      "warnings": 0
     }
   ]
 }
