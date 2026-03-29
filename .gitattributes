@@ -1,25 +1,38 @@
+# CRLF NUKE - Fingolfin Standard
 * text=auto eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.sh text eol=lf
+*.bat text eol=lf
+*.ps1 text eol=lf
 *.png binary
 *.jpg binary
-*.jpeg binary
-*.gif binary
 *.ico binary
-*.pdf binary
-*.zip binary
-*.tar.gz binary
+*.gif binary
 *.woff binary
 *.woff2 binary
 *.ttf binary
 *.eot binary
-*.mp3 binary
-*.mp4 binary
-*.wav binary
-*.ogg binary
-*.onnx binary
-*.pt binary
-*.pth binary
-*.bin binary
 *.exe binary
 *.dll binary
 *.so binary
 *.dylib binary
+*.zip binary
+*.tar.gz binary
+*.onnx binary
+*.bin binary
+*.pth binary
+*.safetensors binary
+*.npy binary
